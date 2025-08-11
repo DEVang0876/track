@@ -65,11 +65,20 @@ class _HomeViewState extends State<HomeView> {
         "_entryType": "transaction"
       })
     ];
-    // Sort by date and time descending (most recent first)
+    // Sort by millisecondsSinceEpoch if possible, else by date string
     allEntries.sort((a, b) {
-      final aDate = DateTime.tryParse(a["date"]?.toString() ?? "") ?? DateTime(1970);
-      final bDate = DateTime.tryParse(b["date"]?.toString() ?? "") ?? DateTime(1970);
-      return bDate.compareTo(aDate);
+      DateTime aDate, bDate;
+      try {
+        aDate = DateTime.parse(a["date"]?.toString() ?? "");
+      } catch (_) {
+        aDate = DateTime(1970);
+      }
+      try {
+        bDate = DateTime.parse(b["date"]?.toString() ?? "");
+      } catch (_) {
+        bDate = DateTime(1970);
+      }
+      return bDate.millisecondsSinceEpoch.compareTo(aDate.millisecondsSinceEpoch);
     });
 
     return Scaffold(
@@ -130,7 +139,10 @@ class _HomeViewState extends State<HomeView> {
             if (e["date"] != null && e["date"].toString().isNotEmpty) {
               try {
                 final dt = DateTime.parse(e["date"]).toLocal();
-                dateTimeStr = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                final hour = dt.hour.toString().padLeft(2, '0');
+                final minute = dt.minute.toString().padLeft(2, '0');
+                final second = dt.second.toString().padLeft(2, '0');
+                dateTimeStr = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}  $hour:$minute:$second';
               } catch (_) {
                 dateTimeStr = e["date"].toString();
               }
@@ -186,8 +198,13 @@ class _HomeViewState extends State<HomeView> {
                 title: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Flexible(
-                      child: Text(description, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis),
+                    Expanded(
+                      child: Text(
+                        description,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     ),
                     if (amountStr.isNotEmpty)
                       Text(amountStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
@@ -197,52 +214,67 @@ class _HomeViewState extends State<HomeView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        if (entryType.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white12,
-                              borderRadius: BorderRadius.circular(8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          if (entryType.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white12,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(entryType, style: const TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
                             ),
-                            child: Text(entryType, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                          ),
-                        if (category.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white12,
-                              borderRadius: BorderRadius.circular(8),
+                          if (category.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white12,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(category, style: const TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
                             ),
-                            child: Text(category, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                          ),
+                          ],
+                          if (wallet.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white12,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(wallet, style: const TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
+                            ),
+                          ],
                         ],
-                        if (wallet.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white12,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(wallet, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Row(
                       children: [
                         Icon(Icons.access_time, color: Colors.white38, size: 15),
                         const SizedBox(width: 4),
-                        Text(dateTimeStr, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        Flexible(
+                          child: Text(
+                            dateTimeStr,
+                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                         if (afterBalance.isNotEmpty) ...[
                           const SizedBox(width: 12),
                           Icon(Icons.account_balance_wallet_rounded, color: Colors.white38, size: 15),
                           const SizedBox(width: 4),
-                          Text('After: $afterBalance', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                          Flexible(
+                            child: Text(
+                              'After: $afterBalance',
+                              style: const TextStyle(color: Colors.white54, fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ],
                     ),
