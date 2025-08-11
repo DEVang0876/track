@@ -65,7 +65,7 @@ class _HomeViewState extends State<HomeView> {
         "_entryType": "transaction"
       })
     ];
-    // Sort by date descending (most recent first)
+    // Sort by date and time descending (most recent first)
     allEntries.sort((a, b) {
       final aDate = DateTime.tryParse(a["date"]?.toString() ?? "") ?? DateTime(1970);
       final bDate = DateTime.tryParse(b["date"]?.toString() ?? "") ?? DateTime(1970);
@@ -76,74 +76,178 @@ class _HomeViewState extends State<HomeView> {
       backgroundColor: TColor.gray,
       body: ListView(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16),
+          // Modern header with gradient and balance
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                colors: [TColor.primary20, TColor.primary10, TColor.secondary50],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: TColor.primary20.withOpacity(0.18),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Total Available', style: TextStyle(color: TColor.gray30, fontSize: 16)),
-                const SizedBox(height: 4),
+                Text('Total Available', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                const SizedBox(height: 8),
                 Text(
                   '\$${totalWallets.toStringAsFixed(2)}',
-                  style: TextStyle(color: TColor.white, fontSize: 40, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                 ),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 16.0, left: 16, right: 16, bottom: 8),
-            child: Text('History', style: TextStyle(color: TColor.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            padding: const EdgeInsets.only(top: 8.0, left: 24, right: 24, bottom: 8),
+            child: Text('History', style: TextStyle(color: TColor.white, fontWeight: FontWeight.bold, fontSize: 20, letterSpacing: 0.5)),
           ),
           if (allEntries.isEmpty)
             Center(child: Text('No history yet.', style: TextStyle(color: Colors.white54))),
           ...allEntries.asMap().entries.map((entry) {
             final idx = entry.key;
             final e = entry.value;
-            Color tileColor = TColor.gray60;
+            Color tileColor = TColor.gray80;
             IconData txIcon = Icons.account_balance_wallet;
-            String title = '';
-            String subtitle = '';
-            String trailing = '';
-            String dateStr = '';
+            String entryType = '';
+            String description = '';
+            String category = '';
+            String afterBalance = '';
+            String dateTimeStr = '';
+            String amountStr = '';
+            String wallet = '';
+            // Parse date and time
             if (e["date"] != null && e["date"].toString().isNotEmpty) {
               try {
-                dateStr = DateTime.parse(e["date"]).toLocal().toString().split(' ')[0];
+                final dt = DateTime.parse(e["date"]).toLocal();
+                dateTimeStr = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
               } catch (_) {
-                dateStr = e["date"].toString().split(' ')[0];
+                dateTimeStr = e["date"].toString();
               }
             }
             if (e["_entryType"] == "expense") {
-              tileColor = TColor.gray60;
-              txIcon = Icons.attach_money;
-              title = e['desc'] ?? '';
-              subtitle = '${e['category'] ?? ''}\n$dateStr';
-              trailing = '\$${e['amount'] ?? ''}';
+              tileColor = TColor.secondary0.withOpacity(0.18);
+              txIcon = Icons.shopping_bag_rounded;
+              entryType = 'Expense';
+              description = e['desc'] ?? '';
+              category = e['category'] ?? '';
+              amountStr = '\$${e['amount'] ?? ''}';
+              afterBalance = e['afterBalance'] != null ? '\$${(e['afterBalance'] as num).toStringAsFixed(2)}' : '';
+              wallet = e['wallet'] ?? '';
             } else {
               // transaction
+              entryType = e['type'] ?? '';
               if (e["type"] == "Borrowed") {
-                tileColor = Colors.green.withOpacity(0.18);
-                txIcon = Icons.arrow_downward;
+                tileColor = Colors.green.withOpacity(0.13);
+                txIcon = Icons.arrow_downward_rounded;
               } else if (e["type"] == "Expense" || e["type"] == "Credit") {
-                tileColor = Colors.red.withOpacity(0.18);
-                txIcon = Icons.arrow_upward;
+                tileColor = Colors.red.withOpacity(0.13);
+                txIcon = Icons.arrow_upward_rounded;
               } else if (e["type"] == "Wallet Deleted") {
-                txIcon = Icons.delete;
+                txIcon = Icons.delete_forever_rounded;
               } else if (e["type"] == "Wallet Added") {
-                txIcon = Icons.account_balance_wallet;
+                txIcon = Icons.account_balance_wallet_rounded;
               }
-              title = '${e['type']} - ${e['wallet'] ?? ''}';
-              subtitle = '${e['desc'] ?? ''}\nAmount: \$${(e['amount'] as num?)?.toStringAsFixed(2) ?? ''}\n$dateStr';
-              String balanceStr = e["balance"] != null ? 'Bal: \$${(e["balance"] as num).toStringAsFixed(2)}' : '';
-              trailing = balanceStr;
+              description = e['desc'] ?? '';
+              category = e['category'] ?? '';
+              amountStr = e['amount'] != null ? '\$${(e['amount'] as num).toStringAsFixed(2)}' : '';
+              afterBalance = e["balance"] != null ? '\$${(e["balance"] as num).toStringAsFixed(2)}' : '';
+              wallet = e['wallet'] ?? '';
             }
-            return Card(
-              color: tileColor,
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: tileColor,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: tileColor.withOpacity(0.18),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: ListTile(
-                leading: Icon(txIcon, color: TColor.secondary),
-                title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
-                trailing: trailing.isNotEmpty ? Text(trailing, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)) : null,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                leading: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: Icon(txIcon, color: TColor.primary20),
+                ),
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(description, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis),
+                    ),
+                    if (amountStr.isNotEmpty)
+                      Text(amountStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  ],
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        if (entryType.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white12,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(entryType, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ),
+                        if (category.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white12,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(category, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ),
+                        ],
+                        if (wallet.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white12,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(wallet, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time, color: Colors.white38, size: 15),
+                        const SizedBox(width: 4),
+                        Text(dateTimeStr, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        if (afterBalance.isNotEmpty) ...[
+                          const SizedBox(width: 12),
+                          Icon(Icons.account_balance_wallet_rounded, color: Colors.white38, size: 15),
+                          const SizedBox(width: 4),
+                          Text('After: $afterBalance', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
                 onLongPress: e["_entryType"] == "expense"
                     ? () => _removeExpense(idx)
                     : null,
