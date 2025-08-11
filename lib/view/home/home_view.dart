@@ -80,6 +80,8 @@ class _HomeViewState extends State<HomeView> {
       }
       return bDate.millisecondsSinceEpoch.compareTo(aDate.millisecondsSinceEpoch);
     });
+    // Ensure newest entries are at the top (in case of same timestamp, preserve insertion order)
+    allEntries = List<Map<String, dynamic>>.from(allEntries);
 
     return Scaffold(
       backgroundColor: TColor.gray,
