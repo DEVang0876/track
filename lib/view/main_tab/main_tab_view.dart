@@ -1,4 +1,5 @@
 import 'package:trackizer/storage/wallet_service.dart';
+import 'package:trackizer/storage/storage_service.dart';
 import '../wallets/wallets_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,12 @@ class MainTabView extends StatefulWidget {
 }
 
 class _MainTabViewState extends State<MainTabView> {
+  List<Map<String, dynamic>> categories = [];
+
+  Future<void> _loadCategories() async {
+    categories = await StorageService.loadBudgets();
+    setState(() {});
+  }
   List<Map<String, dynamic>> wallets = [];
   Key homeViewKey = UniqueKey();
   int selectTab = 0;
@@ -33,6 +40,7 @@ class _MainTabViewState extends State<MainTabView> {
   void initState() {
     super.initState();
     _loadWallets();
+  _loadCategories();
   }
 
   Future<void> _loadWallets() async {
@@ -85,6 +93,10 @@ class _MainTabViewState extends State<MainTabView> {
                                 setState(() {
                                   selectTab = 1;
                                   currentTabView = const SpendingBudgetsView();
+                                });
+                                // Wait for SpendingBudgetsView to pop, then reload categories
+                                Future.delayed(Duration(milliseconds: 300), () async {
+                                  await _loadCategories();
                                 });
                               },
                               icon: Image.asset(
@@ -145,6 +157,7 @@ class _MainTabViewState extends State<MainTabView> {
                             final TextEditingController _dateController = TextEditingController(text: DateTime.now().toString().split(' ')[0]);
                             String type = 'expense';
                             String? selectedWallet = wallets.isNotEmpty ? wallets[0]['name'] : null;
+                            String? selectedCategory = categories.isNotEmpty ? categories[0]['name'] : null;
                             return StatefulBuilder(
                               builder: (context, setState) => AlertDialog(
                                 title: Text('Add Entry'),
@@ -173,6 +186,17 @@ class _MainTabViewState extends State<MainTabView> {
                                       ],
                                       onChanged: (val) => setState(() => type = val ?? 'expense'),
                                     ),
+                                    if (type == 'expense')
+                                      categories.isNotEmpty
+                                          ? DropdownButton<String>(
+                                              value: selectedCategory,
+                                              items: categories.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(value: c['name'] as String, child: Text(c['name']))).toList(),
+                                              onChanged: (val) => setState(() => selectedCategory = val),
+                                            )
+                                          : Padding(
+                                              padding: const EdgeInsets.only(top: 8.0),
+                                              child: Text('No categories found. Add one first!', style: TextStyle(color: Colors.red)),
+                                            ),
                                     if (wallets.isNotEmpty)
                                       DropdownButton<String>(
                                         value: selectedWallet,
@@ -193,8 +217,8 @@ class _MainTabViewState extends State<MainTabView> {
                                       final desc = _descController.text.trim();
                                       final amt = _amountController.text.trim();
                                       final date = _dateController.text.trim();
-                                      if (desc.isNotEmpty && amt.isNotEmpty && date.isNotEmpty && selectedWallet != null) {
-                                        Navigator.pop(context, {"desc": desc, "amount": amt, "date": date, "type": type, "wallet": selectedWallet});
+                                      if (desc.isNotEmpty && amt.isNotEmpty && date.isNotEmpty && selectedWallet != null && (type != 'expense' || selectedCategory != null)) {
+                                        Navigator.pop(context, {"desc": desc, "amount": amt, "date": date, "type": type, "wallet": selectedWallet, "category": selectedCategory});
                                       }
                                     },
                                     child: Text('Add'),
@@ -205,6 +229,18 @@ class _MainTabViewState extends State<MainTabView> {
                           },
                         );
                         if (result != null && result["desc"] != null && result["amount"] != null && result["wallet"] != null) {
+                          // If expense, save to persistent expenses with category
+                          if (result["type"] == "expense" && result["category"] != null) {
+                            List<Map<String, dynamic>> expenses = await StorageService.loadExpenses();
+                            expenses.insert(0, {
+                              "desc": result["desc"],
+                              "amount": result["amount"],
+                              "date": result["date"],
+                              "wallet": result["wallet"],
+                              "category": result["category"]
+                            });
+                            await StorageService.saveExpenses(expenses);
+                          }
                           // Update wallet balance
                           final walletName = result["wallet"];
                           final amt = double.tryParse(result["amount"] ?? '0') ?? 0.0;

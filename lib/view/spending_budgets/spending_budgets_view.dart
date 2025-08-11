@@ -15,76 +15,108 @@ class SpendingBudgetsView extends StatefulWidget {
 }
 
 class _SpendingBudgetsViewState extends State<SpendingBudgetsView> {
-  final TextEditingController _catNameController = TextEditingController();
-  final TextEditingController _spendAmountController = TextEditingController();
-  final TextEditingController _totalBudgetController = TextEditingController();
-  final TextEditingController _leftAmountController = TextEditingController();
-  List<Map<String, dynamic>> budgetArr = [];
+  List<Map<String, dynamic>> expensesArr = [];
+
 
   @override
   void initState() {
     super.initState();
     _loadBudgets();
+    _loadExpenses();
   }
 
+  Future<void> _loadExpenses() async {
+    expensesArr = await StorageService.loadExpenses();
+    setState(() {});
+  }
+  final TextEditingController _catNameController = TextEditingController();
+  Color _selectedColor = TColor.secondaryG;
+  List<Map<String, dynamic>> categoryArr = [];
+
+
+
   Future<void> _loadBudgets() async {
-    budgetArr = await StorageService.loadBudgets();
+    categoryArr = await StorageService.loadBudgets();
     setState(() {});
   }
 
   Future<void> _saveBudgets() async {
-    await StorageService.saveBudgets(budgetArr);
+    await StorageService.saveBudgets(categoryArr);
   }
 
-  void _addBudget() async {
+  void _addCategory() async {
     final name = _catNameController.text.trim();
-    final spend = _spendAmountController.text.trim();
-    final total = _totalBudgetController.text.trim();
-    final left = _leftAmountController.text.trim();
-    if (name.isNotEmpty && spend.isNotEmpty && total.isNotEmpty && left.isNotEmpty) {
+    if (name.isNotEmpty) {
       setState(() {
-        budgetArr.add({
+        categoryArr.add({
           "name": name,
-          "icon": "assets/img/add.png", // default icon
-          "spend_amount": spend,
-          "total_budget": total,
-          "left_amount": left,
-          "color": TColor.secondaryG.value // store as int
+          "color": _selectedColor.value
         });
         _catNameController.clear();
-        _spendAmountController.clear();
-        _totalBudgetController.clear();
-        _leftAmountController.clear();
+        _selectedColor = TColor.secondaryG;
       });
       await _saveBudgets();
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Category added!')));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please fill all fields.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please enter a category name.')));
     }
   }
 
-  void _deleteBudget(int idx) async {
+  void _deleteCategory(int idx) async {
     setState(() {
-      budgetArr.removeAt(idx);
+      categoryArr.removeAt(idx);
     });
     await _saveBudgets();
   }
 
-  void _editBudget(int idx, Map<String, dynamic> newBudget) async {
-    // Ensure color is stored as int
-    if (newBudget['color'] is Color) {
-      newBudget['color'] = (newBudget['color'] as Color).value;
+  void _editCategory(int idx, Map<String, dynamic> newCategory) async {
+    if (newCategory['color'] is Color) {
+      newCategory['color'] = (newCategory['color'] as Color).value;
     }
     setState(() {
-      budgetArr[idx] = newBudget;
+      categoryArr[idx] = newCategory;
     });
     await _saveBudgets();
   }
 
   @override
   Widget build(BuildContext context) {
-    var media = MediaQuery.sizeOf(context);
+  // var media = MediaQuery.sizeOf(context); // unused
+    // Calculate total spent per category
+    Map<String, double> spentPerCategory = {};
+    double totalSpent = 0;
+    for (var exp in expensesArr) {
+      final cat = exp["category"];
+      final amt = double.tryParse(exp["amount"].toString()) ?? 0;
+      if (cat != null) {
+        spentPerCategory[cat] = (spentPerCategory[cat] ?? 0) + amt;
+        totalSpent += amt;
+      }
+    }
+    // Prepare arc data
+    List<Widget> arcWidgets = [];
+    List<ArcValueModel> arcData = [];
+    for (var cat in categoryArr) {
+      final name = cat["name"];
+      final color = cat["color"] is int ? Color(cat["color"]) : (cat["color"] ?? TColor.secondaryG);
+      final spent = spentPerCategory[name] ?? 0;
+      final percent = totalSpent > 0 ? spent / totalSpent : 0;
+      arcData.add(ArcValueModel(color: color, value: percent * 180));
+      arcWidgets.add(
+        Row(
+          children: [
+            CircleAvatar(backgroundColor: color, radius: 7),
+            SizedBox(width: 8),
+            Text(name, style: TextStyle(color: TColor.white)),
+            SizedBox(width: 8),
+            Text("${(percent * 100).toStringAsFixed(1)}%", style: TextStyle(color: TColor.gray30)),
+            SizedBox(width: 8),
+            Text("${spent.toStringAsFixed(2)}", style: TextStyle(color: TColor.gray30)),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: TColor.gray,
       body: SingleChildScrollView(
@@ -107,167 +139,99 @@ class _SpendingBudgetsViewState extends State<SpendingBudgetsView> {
                 ],
               ),
             ),
-            Stack(
-              alignment: Alignment.bottomCenter,
-              children: [
-                Container(
-                  width: media.width * 0.5,
-                  height: media.width * 0.30,
-                  child: CustomPaint(
-                    painter: CustomArc180Painter(
-                      drwArcs: [
-                        ArcValueModel(color: TColor.secondaryG, value: 20),
-                        ArcValueModel(color: TColor.secondary, value: 45),
-                        ArcValueModel(color: TColor.primary10, value: 70),
-                      ],
-                      end: 50,
-                      width: 12,
-                      bgWidth: 8,
+            SizedBox(height: 20),
+            // Arc breakdown
+            if (categoryArr.isNotEmpty)
+              Column(
+                children: [
+                  SizedBox(
+                    height: 120,
+                    width: 240,
+                    child: CustomPaint(
+                      painter: CustomArc180Painter(drwArcs: arcData),
                     ),
                   ),
-                ),
-                Column(
-                  children: [
-                    Text(
-                      "\$82,90",
-                      style: TextStyle(
-                          color: TColor.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      "of \$2,0000 budget",
-                      style: TextStyle(
-                          color: TColor.gray30,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 40,
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Text('Budgets'),
-                      content: Text('Your budgets are on track!'),
-                      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('OK'))],
-                    ),
-                  );
-                },
-                child: Container(
-                  height: 64,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: TColor.border.withOpacity(0.1),
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Your budgets are on tack 👍",
-                        style: TextStyle(
-                            color: TColor.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
+                  SizedBox(height: 10),
+                  ...arcWidgets,
+                  SizedBox(height: 10),
+                  Text("Total spent: ${totalSpent.toStringAsFixed(2)}", style: TextStyle(color: TColor.white)),
+                ],
               ),
-            ),
+            const SizedBox(height: 40),
+            // List of categories
             ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
-              itemCount: budgetArr.length,
+              itemCount: categoryArr.length,
               itemBuilder: (context, index) {
-                var bObj = budgetArr[index];
-                // Convert color int to Color for UI
-                final bObjWithColor = Map<String, dynamic>.from(bObj);
-                if (bObjWithColor['color'] is int) {
-                  bObjWithColor['color'] = Color(bObjWithColor['color']);
+                var cObj = categoryArr[index];
+                final cObjWithColor = Map<String, dynamic>.from(cObj);
+                if (cObjWithColor['color'] is int) {
+                  cObjWithColor['color'] = Color(cObjWithColor['color']);
                 }
-                return BudgetsRow(
-                  bObj: bObjWithColor,
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (context) {
-                        final editCatController = TextEditingController(text: bObjWithColor['name']);
-                        final editSpendController = TextEditingController(text: bObjWithColor['spend_amount']);
-                        final editTotalController = TextEditingController(text: bObjWithColor['total_budget']);
-                        final editLeftController = TextEditingController(text: bObjWithColor['left_amount']);
-                        return Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextField(
-                                controller: editCatController,
-                                decoration: InputDecoration(labelText: 'Category Name'),
-                              ),
-                              TextField(
-                                controller: editSpendController,
-                                decoration: InputDecoration(labelText: 'Spend Amount'),
-                                keyboardType: TextInputType.number,
-                              ),
-                              TextField(
-                                controller: editTotalController,
-                                decoration: InputDecoration(labelText: 'Total Budget'),
-                                keyboardType: TextInputType.number,
-                              ),
-                              TextField(
-                                controller: editLeftController,
-                                decoration: InputDecoration(labelText: 'Left Amount'),
-                                keyboardType: TextInputType.number,
-                              ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  ElevatedButton(
-                                    child: Text('Save'),
-                                    onPressed: () {
-                                      final newBudget = {
-                                        "name": editCatController.text.trim(),
-                                        "icon": bObjWithColor['icon'],
-                                        "spend_amount": editSpendController.text.trim(),
-                                        "total_budget": editTotalController.text.trim(),
-                                        "left_amount": editLeftController.text.trim(),
-                                        "color": bObjWithColor['color'] is Color ? bObjWithColor['color'].value : bObjWithColor['color']
-                                      };
-                                      _editBudget(index, newBudget);
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                  ElevatedButton(
-                                    child: Text('Delete'),
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                    onPressed: () {
-                                      _deleteBudget(index);
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
+                return ListTile(
+                  leading: CircleAvatar(backgroundColor: cObjWithColor['color'], radius: 16),
+                  title: Text(cObjWithColor['name'], style: TextStyle(color: TColor.white)),
+                  trailing: IconButton(
+                    icon: Icon(Icons.edit, color: TColor.gray30),
+                    onPressed: () {
+                      final editCatController = TextEditingController(text: cObjWithColor['name']);
+                      Color editColor = cObjWithColor['color'];
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (context) {
+                          return Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextField(
+                                  controller: editCatController,
+                                  decoration: InputDecoration(labelText: 'Category Name'),
+                                ),
+                                Row(
+                                  children: [
+                                    Text('Color: '),
+                                    GestureDetector(
+                                      onTap: () async {
+                                        // Optionally implement color picker
+                                      },
+                                      child: CircleAvatar(backgroundColor: editColor, radius: 12),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    ElevatedButton(
+                                      child: Text('Save'),
+                                      onPressed: () {
+                                        final newCategory = {
+                                          "name": editCatController.text.trim(),
+                                          "color": editColor.value
+                                        };
+                                        _editCategory(index, newCategory);
+                                        Navigator.pop(context);
+                                      },
+                                    ),
+                                    ElevatedButton(
+                                      child: Text('Delete'),
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                      onPressed: () {
+                                        _deleteCategory(index);
+                                        Navigator.pop(context);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 );
               },
             ),
@@ -288,24 +252,20 @@ class _SpendingBudgetsViewState extends State<SpendingBudgetsView> {
                               controller: _catNameController,
                               decoration: InputDecoration(labelText: 'Category Name'),
                             ),
-                            TextField(
-                              controller: _spendAmountController,
-                              decoration: InputDecoration(labelText: 'Spend Amount'),
-                              keyboardType: TextInputType.number,
-                            ),
-                            TextField(
-                              controller: _totalBudgetController,
-                              decoration: InputDecoration(labelText: 'Total Budget'),
-                              keyboardType: TextInputType.number,
-                            ),
-                            TextField(
-                              controller: _leftAmountController,
-                              decoration: InputDecoration(labelText: 'Left Amount'),
-                              keyboardType: TextInputType.number,
+                            Row(
+                              children: [
+                                Text('Color: '),
+                                GestureDetector(
+                                  onTap: () async {
+                                    // Optionally implement color picker
+                                  },
+                                  child: CircleAvatar(backgroundColor: _selectedColor, radius: 12),
+                                ),
+                              ],
                             ),
                             ElevatedButton(
                               child: Text('Add Category'),
-                              onPressed: _addBudget,
+                              onPressed: _addCategory,
                             )
                           ],
                         ),
