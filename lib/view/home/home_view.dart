@@ -65,7 +65,8 @@ class _HomeViewState extends State<HomeView> {
         "_entryType": "transaction"
       })
     ];
-    // Sort by millisecondsSinceEpoch if possible, else by date string
+    // Sort all entries by date+time descending, fallback to insertion order if date is missing or equal
+    allEntries = allEntries.asMap().entries.map((e) => {...e.value, "_insertion": e.key}).toList();
     allEntries.sort((a, b) {
       DateTime aDate, bDate;
       try {
@@ -78,10 +79,19 @@ class _HomeViewState extends State<HomeView> {
       } catch (_) {
         bDate = DateTime(1970);
       }
-      return bDate.millisecondsSinceEpoch.compareTo(aDate.millisecondsSinceEpoch);
+      int cmp = bDate.compareTo(aDate);
+      if (cmp != 0) return cmp;
+      // If same date, use insertion order (newer first)
+      return (a["_insertion"] as int).compareTo(b["_insertion"] as int);
     });
-    // Ensure newest entries are at the top (in case of same timestamp, preserve insertion order)
-    allEntries = List<Map<String, dynamic>>.from(allEntries);
+    // Deduplicate by unique key (date+desc+amount+category+wallet)
+    final seen = <String>{};
+    allEntries = allEntries.where((e) {
+      final key = '${e["date"]}|${e["desc"]}|${e["amount"]}|${e["category"]}|${e["wallet"]}|${e["_entryType"]}';
+      if (seen.contains(key)) return false;
+      seen.add(key);
+      return true;
+    }).toList();
 
     return Scaffold(
       backgroundColor: TColor.gray,
@@ -137,7 +147,7 @@ class _HomeViewState extends State<HomeView> {
             String dateTimeStr = '';
             String amountStr = '';
             String wallet = '';
-            // Parse date and time
+            // Parse date and time, always show time
             if (e["date"] != null && e["date"].toString().isNotEmpty) {
               try {
                 final dt = DateTime.parse(e["date"]).toLocal();
@@ -148,6 +158,8 @@ class _HomeViewState extends State<HomeView> {
               } catch (_) {
                 dateTimeStr = e["date"].toString();
               }
+            } else {
+              dateTimeStr = '';
             }
             if (e["_entryType"] == "expense") {
               tileColor = TColor.secondary0.withOpacity(0.18);
