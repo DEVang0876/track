@@ -10,7 +10,9 @@ class StorageService {
   static Future<List<Map<String, dynamic>>> loadBudgets() async {
     final box = await Hive.openBox('budgetsBox');
     final data = box.get('budgets', defaultValue: []);
-    return List<Map<String, dynamic>>.from(data ?? []);
+    return (data as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
   }
   static Future<void> saveExpenses(List<Map<String, dynamic>> expenses) async {
     final box = await Hive.openBox('expensesBox');
@@ -20,7 +22,9 @@ class StorageService {
   static Future<List<Map<String, dynamic>>> loadExpenses() async {
     final box = await Hive.openBox('expensesBox');
     final data = box.get('expenses', defaultValue: []);
-    return List<Map<String, dynamic>>.from(data ?? []);
+    return (data as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
   }
 
   static Future<void> saveSubscriptions(List<Map<String, dynamic>> subs) async {
@@ -31,6 +35,8 @@ class StorageService {
   static Future<List<Map<String, dynamic>>> loadSubscriptions() async {
     final box = await Hive.openBox('subsBox');
     final data = box.get('subs', defaultValue: []);
-    return List<Map<String, dynamic>>.from(data ?? []);
+    return (data as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
   }
 }
