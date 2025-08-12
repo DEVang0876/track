@@ -232,10 +232,11 @@ class _MainTabViewState extends State<MainTabView> {
                           // If expense, save to persistent expenses with category
                           if (result["type"] == "expense" && result["category"] != null) {
                             List<Map<String, dynamic>> expenses = await StorageService.loadExpenses();
+                            // Always use current time for new entry
                             expenses.insert(0, {
                               "desc": result["desc"],
                               "amount": result["amount"],
-                              "date": result["date"],
+                              "date": DateTime.now().toIso8601String(),
                               "wallet": result["wallet"],
                               "category": result["category"]
                             });
@@ -279,7 +280,7 @@ class _MainTabViewState extends State<MainTabView> {
                             "wallet": walletName,
                             "amount": amt,
                             "desc": result["desc"],
-                            "date": result["date"],
+                            "date": DateTime.now().toIso8601String(),
                             "color": txColor.value,
                             "balance": newBalance,
                           });

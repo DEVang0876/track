@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:trackizer/common/color_extension.dart';
 import 'package:trackizer/storage/wallet_service.dart';
 import 'package:trackizer/storage/storage_service.dart';
+import 'package:intl/intl.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({Key? key}) : super(key: key);
@@ -59,14 +60,11 @@ class _HomeViewState extends State<HomeView> {
         String dateTimeStr = '';
         String amountStr = '';
         String wallet = '';
-        // Parse date and time, always show time
+        // Use intl DateFormat for consistent date/time display
         if (e["date"] != null && e["date"].toString().isNotEmpty) {
           try {
             final dt = DateTime.parse(e["date"]).toLocal();
-            final hour = dt.hour.toString().padLeft(2, '0');
-            final minute = dt.minute.toString().padLeft(2, '0');
-            final second = dt.second.toString().padLeft(2, '0');
-            dateTimeStr = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}  $hour:$minute:$second';
+            dateTimeStr = DateFormat('yyyy-MM-dd  HH:mm:ss').format(dt);
           } catch (_) {
             dateTimeStr = e["date"].toString();
           }
