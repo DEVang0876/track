@@ -165,14 +165,14 @@ class _MainTabViewState extends State<MainTabView> {
                                 content: Container(
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: [Color(0xFFe0c3fc), Color(0xFF8ec5fc)], // light purple to light blue
+                                      colors: [Color(0xFF23243a), Color(0xFF2c2e4a)], // dark blue gradient
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
                                     borderRadius: BorderRadius.circular(18),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.08),
+                                        color: Colors.black.withOpacity(0.13),
                                         blurRadius: 16,
                                         offset: Offset(0, 4),
                                       ),
@@ -286,7 +286,7 @@ class _MainTabViewState extends State<MainTabView> {
                                           decoration: InputDecoration(
                                             prefixIcon: Icon(Icons.category, color: TColor.secondaryG50),
                                             filled: true,
-                                            fillColor: Colors.white.withOpacity(0.13),
+                                            fillColor: Color(0xFF2c2e4a),
                                             enabledBorder: OutlineInputBorder(
                                               borderSide: BorderSide(color: Colors.white24),
                                               borderRadius: BorderRadius.circular(12),
@@ -296,7 +296,7 @@ class _MainTabViewState extends State<MainTabView> {
                                               borderRadius: BorderRadius.circular(12),
                                             ),
                                           ),
-                                          dropdownColor: Color(0xFF8ec5fc),
+                                          dropdownColor: Color(0xFF23243a),
                                           items: [
                                             DropdownMenuItem(value: 'expense', child: Text('Expense', style: TextStyle(color: Colors.white))),
                                             DropdownMenuItem(value: 'credit', child: Text('Credit to friend', style: TextStyle(color: Colors.white))),
@@ -312,7 +312,7 @@ class _MainTabViewState extends State<MainTabView> {
                                                   decoration: InputDecoration(
                                                     prefixIcon: Icon(Icons.label, color: TColor.primary20),
                                                     filled: true,
-                                                    fillColor: Colors.white.withOpacity(0.13),
+                                                    fillColor: Color(0xFF2c2e4a),
                                                     enabledBorder: OutlineInputBorder(
                                                       borderSide: BorderSide(color: Colors.white24),
                                                       borderRadius: BorderRadius.circular(12),
@@ -322,7 +322,7 @@ class _MainTabViewState extends State<MainTabView> {
                                                       borderRadius: BorderRadius.circular(12),
                                                     ),
                                                   ),
-                                                  dropdownColor: Color(0xFF8ec5fc),
+                                                  dropdownColor: Color(0xFF23243a),
                                                   items: categories.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(value: c['name'] as String, child: Text(c['name'], style: TextStyle(color: Colors.white)))).toList(),
                                                   onChanged: (val) => setState(() => selectedCategory = val),
                                                 )
@@ -336,7 +336,7 @@ class _MainTabViewState extends State<MainTabView> {
                                             decoration: InputDecoration(
                                               prefixIcon: Icon(Icons.account_balance_wallet, color: TColor.secondaryG50),
                                               filled: true,
-                                              fillColor: Colors.white.withOpacity(0.13),
+                                              fillColor: Color(0xFF2c2e4a),
                                               enabledBorder: OutlineInputBorder(
                                                 borderSide: BorderSide(color: Colors.white24),
                                                 borderRadius: BorderRadius.circular(12),
@@ -346,7 +346,7 @@ class _MainTabViewState extends State<MainTabView> {
                                                 borderRadius: BorderRadius.circular(12),
                                               ),
                                             ),
-                                            dropdownColor: Color(0xFF8ec5fc),
+                                            dropdownColor: Color(0xFF23243a),
                                             items: wallets.map<DropdownMenuItem<String>>((w) => DropdownMenuItem<String>(value: w['name'] as String, child: Text(w['name'], style: TextStyle(color: Colors.white)))).toList(),
                                             onChanged: (val) => setState(() => selectedWallet = val),
                                           )
