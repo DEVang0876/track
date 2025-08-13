@@ -203,23 +203,38 @@ class _CalenderViewState extends State<CalenderView> {
                         itemCount: _getEntriesForSelectedDay().length,
                         itemBuilder: (context, idx) {
                           final entry = _getEntriesForSelectedDay()[idx];
-                          final type = entry["type"] ?? entry["_entryType"] ?? "";
+                          final type = (entry["type"] ?? entry["_entryType"] ?? "").toString().toLowerCase();
                           final desc = entry["desc"] ?? "";
                           final amount = entry["amount"] ?? "";
                           final wallet = entry["wallet"] ?? "";
-                          final iconData = type == "expense" ? Icons.shopping_bag : (type == "credit" ? Icons.arrow_upward : Icons.arrow_downward);
-                          final color = type == "expense" ? Colors.purple[300] : (type == "credit" ? Colors.green[300] : Colors.orange[300]);
                           final dateStr = entry["date"] != null ? entry["date"].toString().replaceFirst('T', ' ') : "";
+
+                          IconData iconData;
+                          Color iconBg;
+                          if (type.contains("expense")) {
+                            iconData = Icons.shopping_bag;
+                            iconBg = Color(0xFF8E2DE2);
+                          } else if (type.contains("credit")) {
+                            iconData = Icons.arrow_upward;
+                            iconBg = Color(0xFF56ab2f);
+                          } else if (type.contains("borrow") || type.contains("debit")) {
+                            iconData = Icons.arrow_downward;
+                            iconBg = Color(0xFFFF512F);
+                          } else {
+                            iconData = Icons.info_outline;
+                            iconBg = Colors.blueGrey;
+                          }
+
                           return Container(
                             margin: EdgeInsets.symmetric(vertical: 8, horizontal: 0),
                             decoration: BoxDecoration(
-                              color: TColor.gray60,
+                              color: Color(0xFF4A3F3F),
                               borderRadius: BorderRadius.circular(22),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
+                                  color: Colors.black.withOpacity(0.13),
+                                  blurRadius: 16,
+                                  offset: Offset(0, 4),
                                 ),
                               ],
                             ),
@@ -227,27 +242,33 @@ class _CalenderViewState extends State<CalenderView> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Padding(
-                                  padding: const EdgeInsets.all(12.0),
+                                  padding: const EdgeInsets.all(16.0),
                                   child: CircleAvatar(
-                                    backgroundColor: color,
+                                    backgroundColor: iconBg,
                                     radius: 24,
                                     child: Icon(iconData, color: Colors.white, size: 28),
                                   ),
                                 ),
                                 Expanded(
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 0),
+                                    padding: const EdgeInsets.only(top: 18.0, bottom: 12.0, right: 0),
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text(amount.toString(), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
-                                            SizedBox(width: 8),
+                                            Text(desc.toString(), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                                            Text("₹${amount}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                                          ],
+                                        ),
+                                        SizedBox(height: 8),
+                                        Row(
+                                          children: [
                                             Container(
-                                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                               decoration: BoxDecoration(
-                                                color: Colors.white10,
+                                                color: Colors.white.withOpacity(0.13),
                                                 borderRadius: BorderRadius.circular(8),
                                               ),
                                               child: Text(type, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
@@ -255,9 +276,9 @@ class _CalenderViewState extends State<CalenderView> {
                                             if (desc.isNotEmpty) ...[
                                               SizedBox(width: 8),
                                               Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.white10,
+                                                  color: Colors.white.withOpacity(0.13),
                                                   borderRadius: BorderRadius.circular(8),
                                                 ),
                                                 child: Text(desc, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
@@ -266,9 +287,9 @@ class _CalenderViewState extends State<CalenderView> {
                                             if (wallet.isNotEmpty) ...[
                                               SizedBox(width: 8),
                                               Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.white10,
+                                                  color: Colors.white.withOpacity(0.13),
                                                   borderRadius: BorderRadius.circular(8),
                                                 ),
                                                 child: Text(wallet, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
@@ -287,10 +308,6 @@ class _CalenderViewState extends State<CalenderView> {
                                       ],
                                     ),
                                   ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Text("₹1", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
                                 ),
                               ],
                             ),
