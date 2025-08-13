@@ -77,8 +77,8 @@ class _HomeViewState extends State<HomeView> {
           entryType = 'Expense';
           description = e['desc'] ?? '';
           category = e['category'] ?? '';
-          amountStr = '\$${e['amount'] ?? ''}';
-          afterBalance = e['afterBalance'] != null ? '\$${(e['afterBalance'] as num).toStringAsFixed(2)}' : '';
+          amountStr = '₹${e['amount'] ?? ''}';
+          afterBalance = e['afterBalance'] != null ? '₹${(e['afterBalance'] as num).toStringAsFixed(2)}' : '';
           wallet = e['wallet'] ?? '';
         } else {
           // transaction
@@ -96,8 +96,8 @@ class _HomeViewState extends State<HomeView> {
           }
           description = e['desc'] ?? '';
           category = e['category'] ?? '';
-          amountStr = e['amount'] != null ? '\$${(e['amount'] as num).toStringAsFixed(2)}' : '';
-          afterBalance = e["balance"] != null ? '\$${(e["balance"] as num).toStringAsFixed(2)}' : '';
+          amountStr = e['amount'] != null ? '₹${(e['amount'] as num).toStringAsFixed(2)}' : '';
+          afterBalance = e["balance"] != null ? '₹${(e["balance"] as num).toStringAsFixed(2)}' : '';
           wallet = e['wallet'] ?? '';
         }
         return Container(

@@ -35,9 +35,9 @@ class BreakdownView extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Chip(label: Text('Spent:  \$${totalExpenses.toStringAsFixed(2)}', style: TextStyle(color: Colors.white)), backgroundColor: TColor.secondary),
-                      Chip(label: Text('Borrowed:  \$${totalBorrowed.toStringAsFixed(2)}', style: TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent),
-                      Chip(label: Text('Credit Given:  \$${totalCredit.toStringAsFixed(2)}', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
+                      Chip(label: Text('Spent:  ₹${totalExpenses.toStringAsFixed(2)}', style: TextStyle(color: Colors.white)), backgroundColor: TColor.secondary),
+                      Chip(label: Text('Borrowed:  ₹${totalBorrowed.toStringAsFixed(2)}', style: TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent),
+                      Chip(label: Text('Credit Given:  ₹${totalCredit.toStringAsFixed(2)}', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
                     ],
                   ),
                 ],
@@ -57,7 +57,7 @@ class BreakdownView extends StatelessWidget {
                   leading: Icon(Icons.attach_money, color: TColor.secondary),
                   title: Text(exp['desc'] ?? '', style: TextStyle(color: TColor.white)),
                   subtitle: Text(exp['date'] ?? '', style: TextStyle(color: TColor.gray30)),
-                  trailing: Text('\$${exp['amount']}', style: TextStyle(color: TColor.white, fontWeight: FontWeight.bold)),
+                  trailing: Text('₹${exp['amount']}', style: TextStyle(color: TColor.white, fontWeight: FontWeight.bold)),
                 ),
               );
             }),
@@ -74,7 +74,7 @@ class BreakdownView extends StatelessWidget {
                   leading: Icon(Icons.arrow_downward, color: Colors.red),
                   title: Text(exp['desc'] ?? '', style: TextStyle(color: Colors.red[900])),
                   subtitle: Text(exp['date'] ?? '', style: TextStyle(color: Colors.red[700])),
-                  trailing: Text('\$${exp['amount']}', style: TextStyle(color: Colors.red[900], fontWeight: FontWeight.bold)),
+                  trailing: Text('₹${exp['amount']}', style: TextStyle(color: Colors.red[900], fontWeight: FontWeight.bold)),
                 ),
               );
             }),
@@ -91,7 +91,7 @@ class BreakdownView extends StatelessWidget {
                   leading: Icon(Icons.arrow_upward, color: Colors.green),
                   title: Text(exp['desc'] ?? '', style: TextStyle(color: Colors.green[900])),
                   subtitle: Text(exp['date'] ?? '', style: TextStyle(color: Colors.green[700])),
-                  trailing: Text('\$${exp['amount']}', style: TextStyle(color: Colors.green[900], fontWeight: FontWeight.bold)),
+                  trailing: Text('₹${exp['amount']}', style: TextStyle(color: Colors.green[900], fontWeight: FontWeight.bold)),
                 ),
               );
             }),

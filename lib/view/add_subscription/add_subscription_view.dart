@@ -184,7 +184,7 @@ class _AddSubScriptionViewState extends State<AddSubScriptionView> {
                      const SizedBox(height: 4,),
 
                        Text(
-                        "\$${amountVal.toStringAsFixed(2)}",
+                        "₹${amountVal.toStringAsFixed(2)}",
                         style: TextStyle(
                             color: TColor.white,
                             fontSize: 40,

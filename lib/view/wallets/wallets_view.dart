@@ -202,7 +202,7 @@ class _WalletsViewState extends State<WalletsView> {
                     color: TColor.gray60,
                     child: ListTile(
                       title: Text(w['name'], style: const TextStyle(color: Colors.white)),
-                      subtitle: Text('Balance: \$${w['balance'].toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70)),
+                      subtitle: Text('Balance: ₹${w['balance'].toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
