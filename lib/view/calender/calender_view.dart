@@ -17,7 +17,7 @@ class CalenderView extends StatefulWidget {
 }
 
 class _CalenderViewState extends State<CalenderView> {
-  DateTime _focusedDay = DateTime.now();
+  DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime? _selectedDay;
   List<Map<String, dynamic>> _allEntries = [];
   Map<DateTime, List<Map<String, dynamic>>> _entriesByDate = {};
@@ -73,9 +73,8 @@ class _CalenderViewState extends State<CalenderView> {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final firstDay = DateTime(now.year, now.month, 1);
-    final lastDay = DateTime(now.year, now.month + 1, 0);
+    final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
     final daysInMonth = lastDay.day;
     final startWeekday = firstDay.weekday;
 
@@ -88,7 +87,7 @@ class _CalenderViewState extends State<CalenderView> {
     }
     while (dayCounter <= daysInMonth) {
       while (currentRow.length < 7 && dayCounter <= daysInMonth) {
-        final date = DateTime(now.year, now.month, dayCounter);
+        final date = DateTime(_currentMonth.year, _currentMonth.month, dayCounter);
         final isSelected = _selectedDay != null && date.year == _selectedDay!.year && date.month == _selectedDay!.month && date.day == _selectedDay!.day;
         currentRow.add(
           Expanded(
@@ -102,16 +101,25 @@ class _CalenderViewState extends State<CalenderView> {
                 margin: EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: isSelected ? TColor.primary20 : _getDateColor(date),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   border: isSelected ? Border.all(color: TColor.primaryText, width: 2) : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
                 ),
-                height: 40,
+                height: 44,
                 child: Center(
                   child: Text(
                     dayCounter.toString(),
                     style: TextStyle(
-                      color: isSelected ? Colors.white : TColor.primaryText,
+                      color: isSelected ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      shadows: isSelected ? [Shadow(color: Colors.black26, blurRadius: 4)] : [],
                     ),
                   ),
                 ),
@@ -145,22 +153,45 @@ class _CalenderViewState extends State<CalenderView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              "${now.year} - ${now.month.toString().padLeft(2, '0')}",
-              style: TextStyle(color: TColor.primaryText, fontSize: 22, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.chevron_left, color: TColor.primaryText, size: 32),
+                  onPressed: () {
+                    setState(() {
+                      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+                      _selectedDay = null;
+                    });
+                  },
+                ),
+                Text(
+                  "${_currentMonth.year} - ${_currentMonth.month.toString().padLeft(2, '0')}",
+                  style: TextStyle(color: TColor.primaryText, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                ),
+                IconButton(
+                  icon: Icon(Icons.chevron_right, color: TColor.primaryText, size: 32),
+                  onPressed: () {
+                    setState(() {
+                      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+                      _selectedDay = null;
+                    });
+                  },
+                ),
+              ],
             ),
-            SizedBox(height: 12),
+            SizedBox(height: 10),
             ...calendarRows,
             SizedBox(height: 18),
             if (_selectedDay != null)
               Text(
                 "Entries for ${_selectedDay!.day}/${_selectedDay!.month}/${_selectedDay!.year}",
-                style: TextStyle(color: TColor.primaryText, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(color: TColor.primaryText, fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 1.1),
               ),
             if (_selectedDay != null)
               Expanded(
                 child: _getEntriesForSelectedDay().isEmpty
-                    ? Center(child: Text('No entries for this date.', style: TextStyle(color: Colors.white54)))
+                    ? Center(child: Text('No entries for this date.', style: TextStyle(color: Colors.white54, fontSize: 16)))
                     : ListView.builder(
                         itemCount: _getEntriesForSelectedDay().length,
                         itemBuilder: (context, idx) {
@@ -168,14 +199,93 @@ class _CalenderViewState extends State<CalenderView> {
                           final type = entry["type"] ?? entry["_entryType"] ?? "";
                           final desc = entry["desc"] ?? "";
                           final amount = entry["amount"] ?? "";
-                          final color = type == "expense" ? Colors.red[300] : (type == "credit" ? Colors.green[300] : Colors.orange[300]);
-                          return Card(
-                            color: color,
-                            margin: EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-                            child: ListTile(
-                              title: Text(desc, style: TextStyle(color: TColor.primaryText, fontWeight: FontWeight.w600)),
-                              subtitle: Text(type, style: TextStyle(color: Colors.white70)),
-                              trailing: Text("₹${amount}", style: TextStyle(color: TColor.primaryText, fontWeight: FontWeight.bold)),
+                          final wallet = entry["wallet"] ?? "";
+                          final iconData = type == "expense" ? Icons.shopping_bag : (type == "credit" ? Icons.arrow_upward : Icons.arrow_downward);
+                          final color = type == "expense" ? Colors.purple[300] : (type == "credit" ? Colors.green[300] : Colors.orange[300]);
+                          final dateStr = entry["date"] != null ? entry["date"].toString().replaceFirst('T', ' ') : "";
+                          return Container(
+                            margin: EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+                            decoration: BoxDecoration(
+                              color: TColor.gray60,
+                              borderRadius: BorderRadius.circular(22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: CircleAvatar(
+                                    backgroundColor: color,
+                                    radius: 24,
+                                    child: Icon(iconData, color: Colors.white, size: 28),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(amount.toString(), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                                            SizedBox(width: 8),
+                                            Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white10,
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(type, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                                            ),
+                                            if (desc.isNotEmpty) ...[
+                                              SizedBox(width: 8),
+                                              Container(
+                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white10,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Text(desc, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                                              ),
+                                            ],
+                                            if (wallet.isNotEmpty) ...[
+                                              SizedBox(width: 8),
+                                              Container(
+                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white10,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Text(wallet, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.access_time, color: Colors.white54, size: 18),
+                                            SizedBox(width: 6),
+                                            Text(dateStr, style: TextStyle(color: Colors.white70, fontSize: 15)),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Text("₹1", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                                ),
+                              ],
                             ),
                           );
                         },
