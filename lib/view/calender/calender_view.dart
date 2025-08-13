@@ -18,7 +18,7 @@ class CalenderView extends StatefulWidget {
 
 class _CalenderViewState extends State<CalenderView> {
   DateTime _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
-  DateTime? _selectedDay;
+  DateTime? _selectedDay = DateTime.now();
   List<Map<String, dynamic>> _allEntries = [];
   Map<DateTime, List<Map<String, dynamic>>> _entriesByDate = {};
 
@@ -97,29 +97,36 @@ class _CalenderViewState extends State<CalenderView> {
                   _selectedDay = date;
                 });
               },
-              child: Container(
-                margin: EdgeInsets.all(4),
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                margin: EdgeInsets.all(isSelected ? 2 : 6),
                 decoration: BoxDecoration(
-                  color: isSelected ? TColor.primary20 : _getDateColor(date),
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: isSelected
+                      ? LinearGradient(colors: [TColor.primary20, TColor.primary10])
+                      : LinearGradient(colors: [
+                          _getDateColor(date).withOpacity(0.8),
+                          Colors.white.withOpacity(0.2)
+                        ], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  borderRadius: BorderRadius.circular(isSelected ? 16 : 10),
                   border: isSelected ? Border.all(color: TColor.primaryText, width: 2) : null,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
+                      color: isSelected ? TColor.primary20.withOpacity(0.25) : Colors.black.withOpacity(0.10),
+                      blurRadius: isSelected ? 16 : 8,
+                      offset: Offset(0, isSelected ? 6 : 2),
                     ),
                   ],
                 ),
-                height: 44,
+                height: isSelected ? 54 : 44,
                 child: Center(
                   child: Text(
                     dayCounter.toString(),
                     style: TextStyle(
                       color: isSelected ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      shadows: isSelected ? [Shadow(color: Colors.black26, blurRadius: 4)] : [],
+                      fontSize: isSelected ? 22 : 18,
+                      shadows: isSelected ? [Shadow(color: Colors.black26, blurRadius: 6)] : [],
                     ),
                   ),
                 ),
