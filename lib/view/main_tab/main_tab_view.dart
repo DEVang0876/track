@@ -161,208 +161,230 @@ class _MainTabViewState extends State<MainTabView> {
                             return StatefulBuilder(
                               builder: (context, setState) => AlertDialog(
                                 title: Text('Add Entry', style: TextStyle(color: Colors.white)),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Row(
+                                backgroundColor: null, // Remove solid color to allow custom background
+                                content: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Color(0xFFe0c3fc), Color(0xFF8ec5fc)], // light purple to light blue
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.08),
+                                        blurRadius: 16,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: AnimatedContainer(
+                                    duration: Duration(milliseconds: 600),
+                                    curve: Curves.easeInOut,
+                                    padding: EdgeInsets.all(18),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        CircleAvatar(
-                                          backgroundColor: type == 'expense'
-                                              ? Color(0xFF8E2DE2)
-                                              : type == 'credit'
-                                                  ? Color(0xFF56ab2f)
-                                                  : Color(0xFFFF512F),
-                                          radius: 24,
-                                          child: Icon(
-                                            type == 'expense'
-                                                ? Icons.shopping_bag_rounded
-                                                : type == 'credit'
-                                                    ? Icons.trending_up_rounded
-                                                    : Icons.trending_down_rounded,
-                                            color: Colors.white,
-                                            size: 28,
-                                          ),
-                                        ),
-                                        SizedBox(width: 16),
-                                        Text(
-                                          type == 'expense'
-                                              ? 'Expense'
-                                              : type == 'credit'
-                                                  ? 'Credit to Friend'
-                                                  : 'Borrowed from Friend',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 22,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 18),
-                                    TextField(
-                                      controller: _descController,
-                                      decoration: InputDecoration(
-                                        prefixIcon: Icon(Icons.description, color: TColor.primary20),
-                                        labelText: 'Description',
-                                        labelStyle: TextStyle(color: Colors.white),
-                                        filled: true,
-                                        fillColor: TColor.gray60,
-                                        enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.white24),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: TColor.primary20),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                                    ),
-                                    SizedBox(height: 14),
-                                    TextField(
-                                      controller: _amountController,
-                                      decoration: InputDecoration(
-                                        prefixIcon: Icon(Icons.currency_rupee, color: TColor.secondaryG50),
-                                        labelText: 'Amount',
-                                        labelStyle: TextStyle(color: Colors.white),
-                                        filled: true,
-                                        fillColor: TColor.gray60,
-                                        enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.white24),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: TColor.secondaryG50),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                                    ),
-                                    SizedBox(height: 14),
-                                    TextField(
-                                      controller: _dateController,
-                                      decoration: InputDecoration(
-                                        prefixIcon: Icon(Icons.calendar_today, color: TColor.primary10),
-                                        labelText: 'Date',
-                                        labelStyle: TextStyle(color: Colors.white),
-                                        filled: true,
-                                        fillColor: TColor.gray60,
-                                        enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.white24),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: TColor.primary10),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                                    ),
-                                    SizedBox(height: 14),
-                                    DropdownButtonFormField<String>(
-                                      value: type,
-                                      decoration: InputDecoration(
-                                        prefixIcon: Icon(Icons.category, color: TColor.secondaryG50),
-                                        filled: true,
-                                        fillColor: TColor.gray60,
-                                        enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.white24),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: TColor.secondaryG50),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                      dropdownColor: TColor.gray80,
-                                      items: [
-                                        DropdownMenuItem(value: 'expense', child: Text('Expense', style: TextStyle(color: Colors.white))),
-                                        DropdownMenuItem(value: 'credit', child: Text('Credit to friend', style: TextStyle(color: Colors.white))),
-                                        DropdownMenuItem(value: 'debit', child: Text('Borrowed from friend', style: TextStyle(color: Colors.white))),
-                                      ],
-                                      onChanged: (val) => setState(() => type = val ?? 'expense'),
-                                    ),
-                                    SizedBox(height: 14),
-                                    if (type == 'expense')
-                                      categories.isNotEmpty
-                                          ? DropdownButtonFormField<String>(
-                                              value: selectedCategory,
-                                              decoration: InputDecoration(
-                                                prefixIcon: Icon(Icons.label, color: TColor.primary20),
-                                                filled: true,
-                                                fillColor: TColor.gray60,
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderSide: BorderSide(color: Colors.white24),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderSide: BorderSide(color: TColor.primary20),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
+                                        Row(
+                                          children: [
+                                            CircleAvatar(
+                                              backgroundColor: type == 'expense'
+                                                  ? Color(0xFF8E2DE2)
+                                                  : type == 'credit'
+                                                      ? Color(0xFF56ab2f)
+                                                      : Color(0xFFFF512F),
+                                              radius: 24,
+                                              child: Icon(
+                                                type == 'expense'
+                                                    ? Icons.shopping_bag_rounded
+                                                    : type == 'credit'
+                                                        ? Icons.trending_up_rounded
+                                                        : Icons.trending_down_rounded,
+                                                color: Colors.white,
+                                                size: 28,
                                               ),
-                                              dropdownColor: TColor.gray80,
-                                              items: categories.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(value: c['name'] as String, child: Text(c['name'], style: TextStyle(color: Colors.white)))).toList(),
-                                              onChanged: (val) => setState(() => selectedCategory = val),
-                                            )
-                                          : Padding(
-                                              padding: const EdgeInsets.only(top: 8.0),
-                                              child: Text('No categories found. Add one first!', style: TextStyle(color: Colors.red)),
                                             ),
-                                    if (wallets.isNotEmpty)
-                                      DropdownButtonFormField<String>(
-                                        value: selectedWallet,
-                                        decoration: InputDecoration(
-                                          prefixIcon: Icon(Icons.account_balance_wallet, color: TColor.secondaryG50),
-                                          filled: true,
-                                          fillColor: TColor.gray60,
-                                          enabledBorder: OutlineInputBorder(
-                                            borderSide: BorderSide(color: Colors.white24),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderSide: BorderSide(color: TColor.secondaryG50),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
+                                            SizedBox(width: 16),
+                                            Text(
+                                              type == 'expense'
+                                                  ? 'Expense'
+                                                  : type == 'credit'
+                                                      ? 'Credit to Friend'
+                                                      : 'Borrowed from Friend',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 22,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        dropdownColor: TColor.gray80,
-                                        items: wallets.map<DropdownMenuItem<String>>((w) => DropdownMenuItem<String>(value: w['name'] as String, child: Text(w['name'], style: TextStyle(color: Colors.white)))).toList(),
-                                        onChanged: (val) => setState(() => selectedWallet = val),
-                                      )
-                                    else
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 8.0),
-                                        child: Text('No wallets/accounts found. Add one first!', style: TextStyle(color: Colors.red)),
-                                      ),
-                                    SizedBox(height: 18),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: Text('Cancel', style: TextStyle(color: Colors.white70)),
-                                        ),
-                                        SizedBox(width: 12),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: TColor.primary20,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        SizedBox(height: 18),
+                                        TextField(
+                                          controller: _descController,
+                                          decoration: InputDecoration(
+                                            prefixIcon: Icon(Icons.description, color: TColor.primary20),
+                                            labelText: 'Description',
+                                            labelStyle: TextStyle(color: Colors.white),
+                                            filled: true,
+                                            fillColor: TColor.gray60,
+                                            enabledBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: Colors.white24),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: TColor.primary20),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
                                           ),
-                                          onPressed: () {
-                                            final desc = _descController.text.trim();
-                                            final amt = _amountController.text.trim();
-                                            final date = _dateController.text.trim();
-                                            if (desc.isNotEmpty && amt.isNotEmpty && date.isNotEmpty && selectedWallet != null && (type != 'expense' || selectedCategory != null)) {
-                                              Navigator.pop(context, {"desc": desc, "amount": amt, "date": date, "type": type, "wallet": selectedWallet, "category": selectedCategory});
-                                            }
-                                          },
-                                          child: Text('Add', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                                        ),
+                                        SizedBox(height: 14),
+                                        TextField(
+                                          controller: _amountController,
+                                          decoration: InputDecoration(
+                                            prefixIcon: Icon(Icons.currency_rupee, color: TColor.secondaryG50),
+                                            labelText: 'Amount',
+                                            labelStyle: TextStyle(color: Colors.white),
+                                            filled: true,
+                                            fillColor: TColor.gray60,
+                                            enabledBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: Colors.white24),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: TColor.secondaryG50),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          keyboardType: TextInputType.number,
+                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                                        ),
+                                        SizedBox(height: 14),
+                                        TextField(
+                                          controller: _dateController,
+                                          decoration: InputDecoration(
+                                            prefixIcon: Icon(Icons.calendar_today, color: TColor.primary10),
+                                            labelText: 'Date',
+                                            labelStyle: TextStyle(color: Colors.white),
+                                            filled: true,
+                                            fillColor: TColor.gray60,
+                                            enabledBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: Colors.white24),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: TColor.primary10),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                                        ),
+                                        SizedBox(height: 14),
+                                        DropdownButtonFormField<String>(
+                                          value: type,
+                                          decoration: InputDecoration(
+                                            prefixIcon: Icon(Icons.category, color: TColor.secondaryG50),
+                                            filled: true,
+                                            fillColor: Colors.white.withOpacity(0.13),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: Colors.white24),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderSide: BorderSide(color: TColor.secondaryG50),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          dropdownColor: Color(0xFF8ec5fc),
+                                          items: [
+                                            DropdownMenuItem(value: 'expense', child: Text('Expense', style: TextStyle(color: Colors.white))),
+                                            DropdownMenuItem(value: 'credit', child: Text('Credit to friend', style: TextStyle(color: Colors.white))),
+                                            DropdownMenuItem(value: 'debit', child: Text('Borrowed from friend', style: TextStyle(color: Colors.white))),
+                                          ],
+                                          onChanged: (val) => setState(() => type = val ?? 'expense'),
+                                        ),
+                                        SizedBox(height: 14),
+                                        if (type == 'expense')
+                                          categories.isNotEmpty
+                                              ? DropdownButtonFormField<String>(
+                                                  value: selectedCategory,
+                                                  decoration: InputDecoration(
+                                                    prefixIcon: Icon(Icons.label, color: TColor.primary20),
+                                                    filled: true,
+                                                    fillColor: Colors.white.withOpacity(0.13),
+                                                    enabledBorder: OutlineInputBorder(
+                                                      borderSide: BorderSide(color: Colors.white24),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    focusedBorder: OutlineInputBorder(
+                                                      borderSide: BorderSide(color: TColor.primary20),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                  ),
+                                                  dropdownColor: Color(0xFF8ec5fc),
+                                                  items: categories.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(value: c['name'] as String, child: Text(c['name'], style: TextStyle(color: Colors.white)))).toList(),
+                                                  onChanged: (val) => setState(() => selectedCategory = val),
+                                                )
+                                              : Padding(
+                                                  padding: const EdgeInsets.only(top: 8.0),
+                                                  child: Text('No categories found. Add one first!', style: TextStyle(color: Colors.red)),
+                                                ),
+                                        if (wallets.isNotEmpty)
+                                          DropdownButtonFormField<String>(
+                                            value: selectedWallet,
+                                            decoration: InputDecoration(
+                                              prefixIcon: Icon(Icons.account_balance_wallet, color: TColor.secondaryG50),
+                                              filled: true,
+                                              fillColor: Colors.white.withOpacity(0.13),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderSide: BorderSide(color: Colors.white24),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderSide: BorderSide(color: TColor.secondaryG50),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            dropdownColor: Color(0xFF8ec5fc),
+                                            items: wallets.map<DropdownMenuItem<String>>((w) => DropdownMenuItem<String>(value: w['name'] as String, child: Text(w['name'], style: TextStyle(color: Colors.white)))).toList(),
+                                            onChanged: (val) => setState(() => selectedWallet = val),
+                                          )
+                                        else
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 8.0),
+                                            child: Text('No wallets/accounts found. Add one first!', style: TextStyle(color: Colors.red)),
+                                          ),
+                                        SizedBox(height: 18),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context),
+                                              child: Text('Cancel', style: TextStyle(color: Colors.white70)),
+                                            ),
+                                            SizedBox(width: 12),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: TColor.primary20,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              ),
+                                              onPressed: () {
+                                                final desc = _descController.text.trim();
+                                                final amt = _amountController.text.trim();
+                                                final date = _dateController.text.trim();
+                                                if (desc.isNotEmpty && amt.isNotEmpty && date.isNotEmpty && selectedWallet != null && (type != 'expense' || selectedCategory != null)) {
+                                                  Navigator.pop(context, {"desc": desc, "amount": amt, "date": date, "type": type, "wallet": selectedWallet, "category": selectedCategory});
+                                                }
+                                              },
+                                              child: Text('Add', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                  ],
+                                  ),
                                 ),
-                                backgroundColor: TColor.gray60, // lighter background
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                                 elevation: 16,
                               ),
