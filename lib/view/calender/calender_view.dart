@@ -212,17 +212,17 @@ class _CalenderViewState extends State<CalenderView> {
                           IconData iconData;
                           Color iconBg;
                           if (type.contains("expense")) {
-                            iconData = Icons.shopping_bag;
-                            iconBg = Color(0xFF8E2DE2);
+                            iconData = Icons.shopping_bag_rounded;
+                            iconBg = Color(0xFF8E2DE2); // purple
                           } else if (type.contains("credit")) {
-                            iconData = Icons.arrow_upward;
-                            iconBg = Color(0xFF56ab2f);
+                            iconData = Icons.trending_up_rounded;
+                            iconBg = Color(0xFF56ab2f); // green
                           } else if (type.contains("borrow") || type.contains("debit")) {
-                            iconData = Icons.arrow_downward;
-                            iconBg = Color(0xFFFF512F);
+                            iconData = Icons.trending_down_rounded;
+                            iconBg = Color(0xFFFF512F); // orange/red
                           } else {
                             iconData = Icons.info_outline;
-                            iconBg = Colors.blueGrey;
+                            iconBg = Colors.blueGrey; // info
                           }
 
                           return Container(
@@ -259,7 +259,10 @@ class _CalenderViewState extends State<CalenderView> {
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(desc.toString(), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
-                                            Text("₹${amount}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                                            Padding(
+                                              padding: const EdgeInsets.only(right: 16.0),
+                                              child: Text("₹${amount}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                                            ),
                                           ],
                                         ),
                                         SizedBox(height: 8),
