@@ -207,112 +207,149 @@ class _CalenderViewState extends State<CalenderView> {
                           final desc = entry["desc"] ?? "";
                           final amount = entry["amount"] ?? "";
                           final wallet = entry["wallet"] ?? "";
+                          final category = entry["category"] ?? "";
                           final dateStr = entry["date"] != null ? entry["date"].toString().replaceFirst('T', ' ') : "";
+                          final afterBalance = entry["balance"] != null ? '₹${(entry["balance"] as num).toStringAsFixed(2)}' : '';
 
-                          IconData iconData;
-                          Color iconBg;
+                          Color tileColor;
+                          IconData txIcon;
+                          String entryTypeLabel = '';
                           if (type.contains("expense")) {
-                            iconData = Icons.shopping_bag_rounded;
-                            iconBg = Color(0xFF8E2DE2); // purple
+                            tileColor = TColor.secondary0.withOpacity(0.18);
+                            txIcon = Icons.shopping_bag_rounded;
+                            entryTypeLabel = 'Expense';
                           } else if (type.contains("credit")) {
-                            iconData = Icons.trending_up_rounded;
-                            iconBg = Color(0xFF56ab2f); // green
+                            tileColor = Colors.green[900]!.withOpacity(0.18);
+                            txIcon = Icons.trending_up_rounded;
+                            entryTypeLabel = 'Credit';
                           } else if (type.contains("borrow") || type.contains("debit")) {
-                            iconData = Icons.trending_down_rounded;
-                            iconBg = Color(0xFFFF512F); // orange/red
+                            tileColor = Colors.red[900]!.withOpacity(0.18);
+                            txIcon = Icons.trending_down_rounded;
+                            entryTypeLabel = 'Borrowed';
+                          } else if (type.contains("wallet added")) {
+                            tileColor = Colors.blueGrey[900]!.withOpacity(0.18);
+                            txIcon = Icons.account_balance_wallet_rounded;
+                            entryTypeLabel = 'Wallet Added';
+                          } else if (type.contains("wallet deleted")) {
+                            tileColor = Colors.blueGrey[900]!.withOpacity(0.18);
+                            txIcon = Icons.delete_forever_rounded;
+                            entryTypeLabel = 'Wallet Deleted';
+                          } else if (type.contains("transaction")) {
+                            tileColor = Colors.purple[900]!.withOpacity(0.18);
+                            txIcon = Icons.swap_horiz_rounded;
+                            entryTypeLabel = 'Transaction';
                           } else {
-                            iconData = Icons.info_outline;
-                            iconBg = Colors.blueGrey; // info
+                            tileColor = TColor.gray80;
+                            txIcon = Icons.info_outline;
+                            entryTypeLabel = type;
                           }
 
+                          final amountStr = amount != null && amount.toString().isNotEmpty ? '₹${double.tryParse(amount.toString())?.toStringAsFixed(2) ?? amount.toString()}' : '';
+
                           return Container(
-                            margin: EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+                            margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: Color(0xFF4A3F3F),
-                              borderRadius: BorderRadius.circular(22),
+                              color: tileColor,
+                              borderRadius: BorderRadius.circular(18),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.13),
-                                  blurRadius: 16,
+                                  color: tileColor.withOpacity(0.18),
+                                  blurRadius: 12,
                                   offset: Offset(0, 4),
                                 ),
                               ],
                             ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: CircleAvatar(
-                                    backgroundColor: iconBg,
-                                    radius: 24,
-                                    child: Icon(iconData, color: Colors.white, size: 28),
+                            child: ListTile(
+                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.white,
+                                child: Icon(txIcon, color: TColor.primary20),
+                              ),
+                              title: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      desc,
+                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
                                   ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(top: 18.0, bottom: 12.0, right: 0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                  if (amountStr.isNotEmpty)
+                                    Text(amountStr, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                                ],
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(height: 2),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
                                       children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(desc.toString(), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
-                                            Padding(
-                                              padding: const EdgeInsets.only(right: 16.0),
-                                              child: Text("₹${amount}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                                        if (entryTypeLabel.isNotEmpty)
+                                          Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white12,
+                                              borderRadius: BorderRadius.circular(8),
                                             ),
-                                          ],
-                                        ),
-                                        SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.13),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(type, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                                            child: Text(entryTypeLabel, style: TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                          ),
+                                        if (category.isNotEmpty) ...[
+                                          SizedBox(width: 8),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white12,
+                                              borderRadius: BorderRadius.circular(8),
                                             ),
-                                            if (desc.isNotEmpty) ...[
-                                              SizedBox(width: 8),
-                                              Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white.withOpacity(0.13),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: Text(desc, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-                                              ),
-                                            ],
-                                            if (wallet.isNotEmpty) ...[
-                                              SizedBox(width: 8),
-                                              Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white.withOpacity(0.13),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: Text(wallet, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                        SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            Icon(Icons.access_time, color: Colors.white54, size: 18),
-                                            SizedBox(width: 6),
-                                            Text(dateStr, style: TextStyle(color: Colors.white70, fontSize: 15)),
-                                          ],
-                                        ),
+                                            child: Text(category, style: TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                          ),
+                                        ],
+                                        if (wallet.isNotEmpty) ...[
+                                          SizedBox(width: 8),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white12,
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(wallet, style: TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
-                                ),
-                              ],
+                                  SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.access_time, color: Colors.white38, size: 15),
+                                      SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          dateStr,
+                                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (afterBalance.isNotEmpty) ...[
+                                        SizedBox(width: 12),
+                                        Icon(Icons.account_balance_wallet_rounded, color: Colors.white38, size: 15),
+                                        SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            'After: $afterBalance',
+                                            style: TextStyle(color: Colors.white54, fontSize: 12),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
