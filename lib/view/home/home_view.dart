@@ -3,6 +3,7 @@ import 'package:trackizer/common/color_extension.dart';
 import 'package:trackizer/storage/wallet_service.dart';
 import 'package:trackizer/storage/storage_service.dart';
 import 'package:intl/intl.dart';
+import 'package:trackizer/view/settings/settings_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({Key? key}) : super(key: key);
@@ -274,6 +275,14 @@ class _HomeViewState extends State<HomeView> {
           elevation: 0,
           title: Text('Home', style: TextStyle(color: Colors.white)),
           centerTitle: true,
+          actions: [
+            IconButton(
+              icon: Icon(Icons.settings, color: TColor.gray30),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsView()));
+              },
+            ),
+          ],
         ),
         body: SafeArea(
           child: Column(

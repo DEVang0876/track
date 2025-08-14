@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:trackizer/storage/wallet_service.dart';
 import 'package:trackizer/common/color_extension.dart';
+import 'package:trackizer/view/settings/settings_view.dart';
 
 
 typedef WalletsChangedCallback = void Function();
@@ -151,6 +152,14 @@ class _WalletsViewState extends State<WalletsView> {
         title: const Text('Wallets & Accounts'),
         backgroundColor: TColor.gray,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.settings, color: TColor.gray30),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsView()));
+            },
+          ),
+        ],
       ),
       backgroundColor: TColor.gray,
       body: Padding(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trackizer/view/settings/edit_profile_view.dart';
 
 import '../../common/color_extension.dart';
 import '../../common_widget/icon_item_row.dart';
@@ -12,6 +13,11 @@ class SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<SettingsView> {
   bool isActive = false;
+  String userName = "Code For Any";
+  String userEmail = "codeforany@gmail.com";
+  String avatarPath = "assets/img/u1.png";
+  String selectedCurrency = "₹ INR";
+  bool isDarkTheme = true;
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +59,7 @@ class _SettingsViewState extends State<SettingsView> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  "assets/img/u1.png",
+                  avatarPath,
                   width: 70,
                   height: 70,
                 )
@@ -66,7 +72,7 @@ class _SettingsViewState extends State<SettingsView> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "Code For Any",
+                  userName,
                   style: TextStyle(
                       color: TColor.white,
                       fontSize: 20,
@@ -81,7 +87,7 @@ class _SettingsViewState extends State<SettingsView> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "codeforany@gmail.com",
+                  userEmail,
                   style: TextStyle(
                       color: TColor.gray30,
                       fontSize: 12,
@@ -94,7 +100,25 @@ class _SettingsViewState extends State<SettingsView> {
             ),
             InkWell(
               borderRadius: BorderRadius.circular(15),
-              onTap: () {},
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditProfileView(
+                      name: userName,
+                      email: userEmail,
+                      avatarPath: avatarPath,
+                    ),
+                  ),
+                );
+                if (result != null && result is Map) {
+                  setState(() {
+                    userName = result['name'] ?? userName;
+                    userEmail = result['email'] ?? userEmail;
+                    avatarPath = result['avatarPath'] ?? avatarPath;
+                  });
+                }
+              },
               child: Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
@@ -238,6 +262,83 @@ class _SettingsViewState extends State<SettingsView> {
                           value: "Inter",
                         ),
                         
+                      ],
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20, bottom: 8),
+                    child: Text(
+                      "Preferences",
+                      style: TextStyle(
+                          color: TColor.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: TColor.border.withOpacity(0.1),
+                      ),
+                      color: TColor.gray60.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.currency_rupee, color: TColor.primary20),
+                                SizedBox(width: 8),
+                                Text("Currency", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                            DropdownButton<String>(
+                              value: selectedCurrency,
+                              dropdownColor: TColor.gray80,
+                              style: TextStyle(color: Colors.white),
+                              items: [
+                                DropdownMenuItem(value: "₹ INR", child: Text("₹ INR")),
+                                DropdownMenuItem(value: "\$ USD", child: Text("\$ USD")),
+                                DropdownMenuItem(value: "€ EUR", child: Text("€ EUR")),
+                                DropdownMenuItem(value: "£ GBP", child: Text("£ GBP")),
+                                DropdownMenuItem(value: "¥ JPY", child: Text("¥ JPY")),
+                              ],
+                              onChanged: (val) {
+                                setState(() {
+                                  selectedCurrency = val ?? selectedCurrency;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.dark_mode, color: TColor.primary20),
+                                SizedBox(width: 8),
+                                Text("Dark Theme", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                            Switch(
+                              value: isDarkTheme,
+                              activeColor: TColor.primary20,
+                              onChanged: (val) {
+                                setState(() {
+                                  isDarkTheme = val;
+                                  // TODO: Apply theme change globally
+                                });
+                              },
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
