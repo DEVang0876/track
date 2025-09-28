@@ -2,11 +2,22 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'common/app_settings.dart';
+import 'common/supabase_config.dart';
+import 'storage/sync_service.dart';
+import 'view/auth/auth_gate.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:trackizer/view/main_tab/main_tab_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
+  if (SupabaseConfig.isConfigured) {
+    await Supabase.initialize(
+      url: SupabaseConfig.supabaseUrl,
+      anonKey: SupabaseConfig.supabaseAnonKey,
+    );
+    await SyncService().init();
+  }
   runApp(
     ChangeNotifierProvider(
       create: (_) => AppSettings(),
@@ -36,7 +47,9 @@ class MyApp extends StatelessWidget {
         // ...add more dark theme customizations...
       ),
       themeMode: appSettings.themeMode,
-      home: const MainTabView(),
+      home: SupabaseConfig.isConfigured
+          ? const AuthGate()
+          : const MainTabView(),
     );
   }
 }

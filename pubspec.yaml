@@ -138,6 +138,9 @@ dependencies:
   card_swiper:
     path: dev_lib/card_swiper
   vector_math: ^2.1.4
+  supabase_flutter: ^2.6.0
+  connectivity_plus: ^6.0.5
+  uuid: ^4.4.2
 
   hive: ^2.2.3
   hive_flutter: ^1.1.0

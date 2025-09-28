@@ -1,5 +1,6 @@
 
 import 'package:hive/hive.dart';
+import 'package:trackizer/storage/sync_service.dart';
 
 class WalletService {
   static Future<void> addTransaction(Map<String, dynamic> transaction) async {
@@ -15,6 +16,7 @@ class WalletService {
     }
     transactions.insert(0, transaction);
     await box.put('transactions', transactions);
+    await SyncService().enqueue('wallet.tx.add', transaction);
   }
 
   static Future<List<Map<String, dynamic>>> loadTransactions() async {
@@ -40,6 +42,10 @@ class WalletService {
       }
     }
     await box.put('wallets', wallets);
+    await SyncService().enqueue('wallet.balance.update', {
+      'name': name,
+      'balance': newBalance,
+    });
   }
   static Future<void> saveWallets(List<Map<String, dynamic>> wallets) async {
     final box = await Hive.openBox('walletsBox');

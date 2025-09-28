@@ -1,10 +1,15 @@
 
   import 'package:hive/hive.dart';
+  import 'package:trackizer/storage/sync_service.dart';
 
 class StorageService {
   static Future<void> saveBudgets(List<Map<String, dynamic>> budgets) async {
     final box = await Hive.openBox('budgetsBox');
     await box.put('budgets', budgets);
+    // Queue for cloud sync (batch)
+    await SyncService().enqueue('budgets.save', {
+      'items': budgets,
+    });
   }
 
   static Future<List<Map<String, dynamic>>> loadBudgets() async {
@@ -34,6 +39,8 @@ class StorageService {
     // Insert at the start
     expenses.insert(0, expense);
     await box.put('expenses', expenses);
+    // Queue single add for sync
+    await SyncService().enqueue('expense.add', expense);
   }
 
   static Future<List<Map<String, dynamic>>> loadExpenses() async {
@@ -47,6 +54,10 @@ class StorageService {
   static Future<void> saveSubscriptions(List<Map<String, dynamic>> subs) async {
     final box = await Hive.openBox('subsBox');
     await box.put('subs', subs);
+    // Queue for cloud sync (batch)
+    await SyncService().enqueue('subscriptions.save', {
+      'items': subs,
+    });
   }
 
   static Future<List<Map<String, dynamic>>> loadSubscriptions() async {
