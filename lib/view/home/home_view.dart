@@ -310,10 +310,10 @@ class _HomeViewState extends State<HomeView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total Available', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    Text('Total Available', style: TextStyle(color: Colors.white70, fontSize: 18)),
                     const SizedBox(height: 8),
                     Text(
-                      '\$${totalWallets.toStringAsFixed(2)}',
+                      '\₹${totalWallets.toStringAsFixed(2)}',
                       style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                     ),
                   ],
