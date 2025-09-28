@@ -30,7 +30,7 @@ class CustomArc180Painter extends CustomPainter {
 
     
     Paint backgroundPaint = Paint();
-    backgroundPaint.color = TColor.gray60.withOpacity(0.5);
+  backgroundPaint.color = TColor.gray60.withValues(alpha: 0.5);
     backgroundPaint.style = PaintingStyle.stroke;
     backgroundPaint.strokeWidth = bgWidth;
     backgroundPaint.strokeCap = StrokeCap.round;
@@ -50,7 +50,7 @@ class CustomArc180Painter extends CustomPainter {
       activePaint.strokeCap = StrokeCap.round;
 
       Paint shadowPaint = Paint()
-        ..color = arcObj.color.withOpacity(0.3)
+        ..color = arcObj.color.withValues(alpha: 0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = width + blurWidth
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);

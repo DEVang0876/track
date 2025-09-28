@@ -21,7 +21,7 @@ class UpcomingBillRow extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             border: Border.all(
-              color: TColor.border.withOpacity(0.15),
+              color: TColor.border.withValues(alpha: 0.15),
             ),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -33,7 +33,7 @@ class UpcomingBillRow extends StatelessWidget {
                 width: 40,
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: TColor.gray70.withOpacity(0.5),
+                  color: TColor.gray70.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,

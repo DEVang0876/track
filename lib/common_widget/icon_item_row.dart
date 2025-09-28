@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 import '../common/color_extension.dart';
 
@@ -87,7 +86,7 @@ class IconItemSwitchRow extends StatelessWidget {
             style: TextStyle(
                 color: TColor.white, fontSize: 14, fontWeight: FontWeight.w600),
           ),
-          Spacer(),
+          const Spacer(),
           const SizedBox(
             width: 8,
           ),

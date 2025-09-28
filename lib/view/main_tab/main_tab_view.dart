@@ -2,7 +2,6 @@ import 'package:trackizer/storage/wallet_service.dart';
 import 'package:trackizer/storage/storage_service.dart';
 import '../wallets/wallets_view.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 // import 'package:trackizer/view/add_subscription/add_subscription_view.dart';
 
 import '../../common/color_extension.dart';
@@ -172,7 +171,7 @@ class _MainTabViewState extends State<MainTabView> {
                                     borderRadius: BorderRadius.circular(18),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.13),
+                                        color: Colors.black.withValues(alpha: 0.13),
                                         blurRadius: 16,
                                         offset: Offset(0, 4),
                                       ),
@@ -460,7 +459,7 @@ class _MainTabViewState extends State<MainTabView> {
                         margin: const EdgeInsets.all(20),
                         decoration: BoxDecoration(boxShadow: [
                           BoxShadow(
-                              color: TColor.secondary.withOpacity(0.25),
+                              color: TColor.secondary.withValues(alpha: 0.25),
                               blurRadius: 10,
                               offset: const Offset(0, 4))
                         ], borderRadius: BorderRadius.circular(50)),

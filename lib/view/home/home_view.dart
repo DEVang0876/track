@@ -9,7 +9,7 @@ class HomeView extends StatefulWidget {
   const HomeView({Key? key}) : super(key: key);
 
   @override
-  _HomeViewState createState() => _HomeViewState();
+  State<HomeView> createState() => _HomeViewState();
 }
 
 List<Map<String, dynamic>> globalExpenses = [];
@@ -73,7 +73,7 @@ class _HomeViewState extends State<HomeView> {
           dateTimeStr = '';
         }
         if (e["_entryType"] == "expense") {
-          tileColor = TColor.secondary0.withOpacity(0.18);
+          tileColor = TColor.secondary0.withValues(alpha: 0.18);
           txIcon = Icons.shopping_bag_rounded;
           entryType = 'Expense';
           description = e['desc'] ?? '';
@@ -85,10 +85,10 @@ class _HomeViewState extends State<HomeView> {
           // transaction
           entryType = e['type'] ?? '';
           if (e["type"] == "Borrowed") {
-            tileColor = Colors.green.withOpacity(0.13);
+            tileColor = Colors.green.withValues(alpha: 0.13);
             txIcon = Icons.arrow_downward_rounded;
           } else if (e["type"] == "Expense" || e["type"] == "Credit") {
-            tileColor = Colors.red.withOpacity(0.13);
+            tileColor = Colors.red.withValues(alpha: 0.13);
             txIcon = Icons.arrow_upward_rounded;
           } else if (e["type"] == "Wallet Deleted") {
             txIcon = Icons.delete_forever_rounded;
@@ -108,7 +108,7 @@ class _HomeViewState extends State<HomeView> {
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: tileColor.withOpacity(0.18),
+                color: tileColor.withValues(alpha: 0.18),
                 blurRadius: 12,
                 offset: Offset(0, 4),
               ),
@@ -301,7 +301,7 @@ class _HomeViewState extends State<HomeView> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: TColor.primary20.withOpacity(0.18),
+                      color: TColor.primary20.withValues(alpha: 0.18),
                       blurRadius: 18,
                       offset: const Offset(0, 8),
                     ),

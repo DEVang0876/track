@@ -123,9 +123,9 @@ class _SettingsViewState extends State<SettingsView> {
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: TColor.border.withOpacity(0.15),
+                    color: TColor.border.withValues(alpha: 0.15),
                   ),
-                  color: TColor.gray60.withOpacity(0.2),
+                  color: TColor.gray60.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: Text(
@@ -156,9 +156,9 @@ class _SettingsViewState extends State<SettingsView> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: TColor.border.withOpacity(0.1),
+                        color: TColor.border.withValues(alpha: 0.1),
                       ),
-                      color: TColor.gray60.withOpacity(0.2),
+                      color: TColor.gray60.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
@@ -196,9 +196,9 @@ class _SettingsViewState extends State<SettingsView> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: TColor.border.withOpacity(0.1),
+                        color: TColor.border.withValues(alpha: 0.1),
                       ),
-                      color: TColor.gray60.withOpacity(0.2),
+                      color: TColor.gray60.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
@@ -239,9 +239,9 @@ class _SettingsViewState extends State<SettingsView> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: TColor.border.withOpacity(0.1),
+                        color: TColor.border.withValues(alpha: 0.1),
                       ),
-                      color: TColor.gray60.withOpacity(0.2),
+                      color: TColor.gray60.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
@@ -280,9 +280,9 @@ class _SettingsViewState extends State<SettingsView> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: TColor.border.withOpacity(0.1),
+                        color: TColor.border.withValues(alpha: 0.1),
                       ),
-                      color: TColor.gray60.withOpacity(0.2),
+                      color: TColor.gray60.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(

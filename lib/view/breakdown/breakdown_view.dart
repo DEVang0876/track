@@ -48,7 +48,6 @@ class BreakdownView extends StatelessWidget {
               child: Text('Expenses', style: TextStyle(color: TColor.white, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
             ...globalExpenses.asMap().entries.where((e) => e.value['type'] == 'expense').map((entry) {
-              final idx = entry.key;
               final exp = entry.value;
               return Card(
                 color: TColor.gray60,

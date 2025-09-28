@@ -21,7 +21,7 @@ class SubScriptionHomeRow extends StatelessWidget {
            padding: const EdgeInsets.all( 10),
           decoration: BoxDecoration(
             border: Border.all(
-              color: TColor.border.withOpacity(0.15),
+              color: TColor.border.withValues(alpha: 0.15),
             ),
             
             borderRadius: BorderRadius.circular(16),

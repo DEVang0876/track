@@ -1,13 +1,10 @@
-import 'dart:math';
-
-import 'package:calendar_agenda/calendar_agenda.dart';
+// Unused imports removed
 import 'package:flutter/material.dart';
 import 'package:trackizer/common/color_extension.dart';
 import 'package:trackizer/view/settings/settings_view.dart';
 
 import 'package:trackizer/storage/storage_service.dart';
 
-import '../../common_widget/subscription_cell.dart';
 
 class CalenderView extends StatefulWidget {
   const CalenderView({super.key});
@@ -105,14 +102,16 @@ class _CalenderViewState extends State<CalenderView> {
                   gradient: isSelected
                       ? LinearGradient(colors: [TColor.primary20, TColor.primary10])
                       : LinearGradient(colors: [
-                          _getDateColor(date).withOpacity(0.8),
-                          Colors.white.withOpacity(0.2)
+                          _getDateColor(date).withValues(alpha: 0.8),
+                          Colors.white.withValues(alpha: 0.2)
                         ], begin: Alignment.topLeft, end: Alignment.bottomRight),
                   borderRadius: BorderRadius.circular(isSelected ? 16 : 10),
                   border: isSelected ? Border.all(color: TColor.primaryText, width: 2) : null,
                   boxShadow: [
                     BoxShadow(
-                      color: isSelected ? TColor.primary20.withOpacity(0.25) : Colors.black.withOpacity(0.10),
+            color: isSelected
+              ? TColor.primary20.withValues(alpha: 0.25)
+              : Colors.black.withValues(alpha: 0.10),
                       blurRadius: isSelected ? 16 : 8,
                       offset: Offset(0, isSelected ? 6 : 2),
                     ),
@@ -215,27 +214,27 @@ class _CalenderViewState extends State<CalenderView> {
                           IconData txIcon;
                           String entryTypeLabel = '';
                           if (type.contains("expense")) {
-                            tileColor = TColor.secondary0.withOpacity(0.18);
+                            tileColor = TColor.secondary0.withValues(alpha: 0.18);
                             txIcon = Icons.shopping_bag_rounded;
                             entryTypeLabel = 'Expense';
                           } else if (type.contains("credit")) {
-                            tileColor = Colors.green[900]!.withOpacity(0.18);
+                            tileColor = Colors.green[900]!.withValues(alpha: 0.18);
                             txIcon = Icons.trending_up_rounded;
                             entryTypeLabel = 'Credit';
                           } else if (type.contains("borrow") || type.contains("debit")) {
-                            tileColor = Colors.red[900]!.withOpacity(0.18);
+                            tileColor = Colors.red[900]!.withValues(alpha: 0.18);
                             txIcon = Icons.trending_down_rounded;
                             entryTypeLabel = 'Borrowed';
                           } else if (type.contains("wallet added")) {
-                            tileColor = Colors.blueGrey[900]!.withOpacity(0.18);
+                            tileColor = Colors.blueGrey[900]!.withValues(alpha: 0.18);
                             txIcon = Icons.account_balance_wallet_rounded;
                             entryTypeLabel = 'Wallet Added';
                           } else if (type.contains("wallet deleted")) {
-                            tileColor = Colors.blueGrey[900]!.withOpacity(0.18);
+                            tileColor = Colors.blueGrey[900]!.withValues(alpha: 0.18);
                             txIcon = Icons.delete_forever_rounded;
                             entryTypeLabel = 'Wallet Deleted';
                           } else if (type.contains("transaction")) {
-                            tileColor = Colors.purple[900]!.withOpacity(0.18);
+                            tileColor = Colors.purple[900]!.withValues(alpha: 0.18);
                             txIcon = Icons.swap_horiz_rounded;
                             entryTypeLabel = 'Transaction';
                           } else {
@@ -253,7 +252,7 @@ class _CalenderViewState extends State<CalenderView> {
                               borderRadius: BorderRadius.circular(18),
                               boxShadow: [
                                 BoxShadow(
-                                  color: tileColor.withOpacity(0.18),
+                                  color: tileColor.withValues(alpha: 0.18),
                                   blurRadius: 12,
                                   offset: Offset(0, 4),
                                 ),

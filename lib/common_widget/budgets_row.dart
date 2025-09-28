@@ -23,9 +23,9 @@ class BudgetsRow extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             border: Border.all(
-              color: TColor.border.withOpacity(0.05),
+              color: TColor.border.withValues(alpha: 0.05),
             ),
-            color: TColor.gray60.withOpacity(0.1),
+            color: TColor.gray60.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
           ),
           alignment: Alignment.center,

@@ -2,7 +2,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'common/app_settings.dart';
-import 'package:trackizer/common/color_extension.dart';
 import 'package:trackizer/view/main_tab/main_tab_view.dart';
 
 Future<void> main() async {
@@ -32,7 +31,7 @@ class MyApp extends StatelessWidget {
         // ...add more light theme customizations...
       ),
       darkTheme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: Color(0xFF181820),
+        scaffoldBackgroundColor: const Color(0xFF181820),
         textTheme: ThemeData.dark().textTheme.apply(bodyColor: Colors.white),
         // ...add more dark theme customizations...
       ),

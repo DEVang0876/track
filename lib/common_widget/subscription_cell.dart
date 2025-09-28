@@ -18,9 +18,9 @@ class SubScriptionCell extends StatelessWidget {
         padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
           border: Border.all(
-            color: TColor.border.withOpacity(0.1),
+            color: TColor.border.withValues(alpha: 0.1),
           ),
-          color: TColor.gray60.withOpacity(0.2),
+          color: TColor.gray60.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(16),
         ),
         alignment: Alignment.centerLeft,
