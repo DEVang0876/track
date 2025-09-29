@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:trackizer/common_widget/safe_image.dart';
 
 import '../common/color_extension.dart';
 
@@ -18,12 +19,7 @@ class IconItemRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
         children: [
-          Image.asset(
-            icon,
-            width: 20,
-            height: 20,
-            color: TColor.gray20,
-          ),
+          safeAsset(icon, width: 20, height: 20, color: TColor.gray20),
           const SizedBox(
             width: 15,
           ),
@@ -45,8 +41,7 @@ class IconItemRow extends StatelessWidget {
           const SizedBox(
             width: 8,
           ),
-          Image.asset("assets/img/next.png",
-              width: 12, height: 12, color: TColor.gray30)
+      safeAsset("assets/img/next.png", width: 12, height: 12, color: TColor.gray30)
         ],
       ),
     );
@@ -72,12 +67,7 @@ class IconItemSwitchRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
         children: [
-          Image.asset(
-            icon,
-            width: 20,
-            height: 20,
-            color: TColor.gray20,
-          ),
+          safeAsset(icon, width: 20, height: 20, color: TColor.gray20),
           const SizedBox(
             width: 15,
           ),

@@ -12,8 +12,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   if (SupabaseConfig.isConfigured) {
+    // Use normalized URL derived from anon key if needed
     await Supabase.initialize(
-      url: SupabaseConfig.supabaseUrl,
+      url: SupabaseConfig.effectiveUrl,
       anonKey: SupabaseConfig.supabaseAnonKey,
     );
     await SyncService().init();

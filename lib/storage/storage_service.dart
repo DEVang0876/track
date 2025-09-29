@@ -67,4 +67,21 @@ class StorageService {
         .map((e) => Map<String, dynamic>.from(e as Map))
         .toList();
   }
+
+  /// Clears all local persisted data in Hive boxes.
+  ///
+  /// - budgetsBox
+  /// - expensesBox
+  /// - walletsBox
+  /// - subsBox
+  /// Optionally also clears the sync queue box via SyncService.
+  static Future<void> clearAllLocal({bool includeQueue = true}) async {
+    try { await Hive.openBox('budgetsBox').then((b) => b.clear()); } catch (_) {}
+    try { await Hive.openBox('expensesBox').then((b) => b.clear()); } catch (_) {}
+    try { await Hive.openBox('walletsBox').then((b) => b.clear()); } catch (_) {}
+    try { await Hive.openBox('subsBox').then((b) => b.clear()); } catch (_) {}
+    if (includeQueue) {
+      try { await SyncService().clearQueue(); } catch (_) {}
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../common/color_extension.dart';
+import 'safe_image.dart';
 
 class ImageButton extends StatelessWidget {
   final String image;
@@ -23,7 +24,7 @@ class ImageButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
         ),
         alignment: Alignment.center,
-        child: Image.asset(image, width: 50, height: 50, color: TColor.gray70),
+        child: safeAsset(image, width: 50, height: 50, color: TColor.gray70),
       ),
     );
   }

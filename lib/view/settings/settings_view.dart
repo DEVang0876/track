@@ -6,6 +6,8 @@ import '../../common_widget/icon_item_row.dart';
 import 'package:trackizer/storage/sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:trackizer/common/supabase_config.dart';
+import 'package:trackizer/storage/storage_service.dart';
+import 'package:trackizer/common/supabase_checks.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -24,7 +26,7 @@ class _SettingsViewState extends State<SettingsView> {
 
   @override
   Widget build(BuildContext context) {
-    final bool supaEnabled = SupabaseConfig.isConfigured;
+  final bool supaEnabled = SupabaseConfig.isConfigured;
     final bool isLoggedIn = supaEnabled &&
         (Supabase.instance.client.auth.currentUser != null);
     return Scaffold(
@@ -183,6 +185,31 @@ class _SettingsViewState extends State<SettingsView> {
                             });
                           },
                         ),
+                        // Manual local reset
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(children: [
+                                const Icon(Icons.delete_forever, color: Colors.white70),
+                                const SizedBox(width: 8),
+                                Text("Reset local data", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
+                              ]),
+                              TextButton(
+                                onPressed: () async {
+                                  await StorageService.clearAllLocal(includeQueue: true);
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Local data cleared')),
+                                    );
+                                  }
+                                },
+                                child: const Text('Clear'),
+                              )
+                            ],
+                          ),
+                        ),
                         if (supaEnabled)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -197,6 +224,32 @@ class _SettingsViewState extends State<SettingsView> {
                                 TextButton(
                                   onPressed: () async { await SyncService().syncNow(); },
                                   child: const Text('Run'),
+                                )
+                              ],
+                            ),
+                          ),
+                        if (supaEnabled)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(children: [
+                                  const Icon(Icons.verified, color: Colors.white70),
+                                  const SizedBox(width: 8),
+                                  Text("Check cloud setup", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
+                                ]),
+                                TextButton(
+                                  onPressed: () async {
+                                    final res = await checkSupabaseSetup();
+                                    if (!mounted) return;
+                                    final ok = res.values.every((v) => v == 'ok');
+                                    final msg = ok ? 'All tables accessible' : res.entries.map((e) => '${e.key}: ${e.value}').join(' | ');
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(msg), duration: const Duration(seconds: 4)),
+                                    );
+                                  },
+                                  child: const Text('Verify'),
                                 )
                               ],
                             ),
@@ -296,9 +349,29 @@ class _SettingsViewState extends State<SettingsView> {
                                   Text("Logout", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
                                 ]),
                                 TextButton(
-                                  onPressed: () async { await Supabase.instance.client.auth.signOut(); if (mounted) Navigator.pop(context); },
+                                  onPressed: () async {
+                                    // Clear local data first for a clean slate across users
+                                    await StorageService.clearAllLocal(includeQueue: true);
+                                    await Supabase.instance.client.auth.signOut();
+                                    if (mounted) Navigator.pop(context);
+                                  },
                                   child: const Text('Sign out'),
                                 )
+                              ],
+                            ),
+                          ),
+                        if (!supaEnabled)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    "Cloud sync disabled. Run app with SUPABASE_URL and SUPABASE_ANON_KEY to enable login and sync.",
+                                    style: TextStyle(color: TColor.gray30, fontSize: 12),
+                                  ),
+                                ),
                               ],
                             ),
                           ),

@@ -29,6 +29,12 @@ class SyncService {
     _connSub?.cancel();
   }
 
+  /// Clear pending sync operations from the local queue.
+  Future<void> clearQueue() async {
+    final box = await Hive.openBox(_queueBoxName);
+    await box.clear();
+  }
+
   Future<void> enqueue(String type, Map<String, dynamic> payload) async {
     final box = await Hive.openBox(_queueBoxName);
     final item = {
@@ -57,8 +63,11 @@ class SyncService {
 
   Future<void> _pushQueue(String userId) async {
     final box = await Hive.openBox(_queueBoxName);
-    final items = box.values.toList();
-    for (final raw in items) {
+    // Iterate using keys to delete deterministically
+    final keys = box.keys.toList();
+    for (final key in keys) {
+      final raw = box.get(key);
+      if (raw == null) continue;
       final map = Map<String, dynamic>.from(raw as Map);
       final type = map['type'] as String?;
       final payload = Map<String, dynamic>.from(map['payload'] as Map);
@@ -107,7 +116,6 @@ class SyncService {
             break;
         }
         // Remove from queue on success
-        final key = box.keyAt(box.values.toList().indexOf(raw));
         await box.delete(key);
       } catch (_) {
         // Leave in queue to retry later
