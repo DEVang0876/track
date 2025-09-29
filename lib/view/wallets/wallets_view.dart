@@ -27,7 +27,20 @@ class _WalletsViewState extends State<WalletsView> {
 
 
   Future<void> _loadWallets() async {
-    wallets = await WalletService.loadWallets();
+    final loaded = await WalletService.loadWallets();
+    // Dedupe by id or name (prefer id) to avoid duplicates in UI if history created multiple rows
+    final seen = <String>{};
+    final List<Map<String, dynamic>> unique = [];
+    for (final w in loaded) {
+      final key = (w['id']?.toString() ?? '').isNotEmpty
+          ? 'id:${w['id']}'
+          : ((w['name']?.toString() ?? '').isNotEmpty ? 'name:${w['name']}' : '');
+      if (key.isEmpty || !seen.contains(key)) {
+        if (key.isNotEmpty) seen.add(key);
+        unique.add(w);
+      }
+    }
+    wallets = unique;
     setState(() {});
   }
 
@@ -39,12 +52,10 @@ class _WalletsViewState extends State<WalletsView> {
     final name = _nameController.text.trim();
     final balance = double.tryParse(_balanceController.text.trim()) ?? 0.0;
     if (name.isNotEmpty) {
-      setState(() {
-        wallets.add({"name": name, "balance": balance});
-        _nameController.clear();
-        _balanceController.clear();
-      });
-      await _saveWallets();
+      await WalletService.addWallet(name, balance);
+      await _loadWallets();
+      _nameController.clear();
+      _balanceController.clear();
       // Record transaction for wallet/account add
       await WalletService.addTransaction({
         "type": "Wallet Added",
@@ -72,10 +83,9 @@ class _WalletsViewState extends State<WalletsView> {
 
   void _deleteWallet(int idx) async {
     final deletedWallet = wallets[idx];
-    setState(() {
-      wallets.removeAt(idx);
-    });
-    await _saveWallets();
+    final String id = (deletedWallet['id']?.toString() ?? '');
+    await WalletService.deleteWalletById(id, name: deletedWallet['name']);
+    await _loadWallets();
     // Record transaction for wallet/account deletion
     await WalletService.addTransaction({
       "type": "Wallet Deleted",
@@ -211,7 +221,21 @@ class _WalletsViewState extends State<WalletsView> {
                     color: TColor.gray60,
                     child: ListTile(
                       title: Text(w['name'], style: const TextStyle(color: Colors.white)),
-                      subtitle: Text('Balance: ₹${w['balance'].toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70)),
+                      subtitle: Text(
+                        () {
+                          final bal = w['balance'];
+                          double val;
+                          if (bal is num) {
+                            val = bal.toDouble();
+                          } else if (bal is String) {
+                            val = double.tryParse(bal) ?? 0.0;
+                          } else {
+                            val = 0.0;
+                          }
+                          return 'Balance: ₹${val.toStringAsFixed(2)}';
+                        }(),
+                        style: const TextStyle(color: Colors.white70),
+                      ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

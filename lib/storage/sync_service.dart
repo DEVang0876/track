@@ -12,12 +12,15 @@ class SyncService {
 
   static const _queueBoxName = 'syncQueue';
   static const _uuid = Uuid();
+  static const _metaBoxName = 'syncMetaBox';
+  static const _expenseTableKey = 'expenseTableName';
   StreamSubscription<List<ConnectivityResult>>? _connSub;
   bool _isSyncing = false;
   String? _lastError;
 
   Future<void> init() async {
     await Hive.openBox(_queueBoxName);
+    await Hive.openBox(_metaBoxName);
     _connSub = Connectivity().onConnectivityChanged.listen((event) {
       final online = event.any((e) => e != ConnectivityResult.none);
       if (online) {
@@ -56,6 +59,31 @@ class SyncService {
     unawaited(syncNow());
   }
 
+  Future<String> _getExpenseTableName() async {
+    // Cache lookup first
+    final meta = await Hive.openBox(_metaBoxName);
+    final cached = meta.get(_expenseTableKey) as String?;
+    if (cached != null && cached.isNotEmpty) return cached;
+    // Probe Supabase for available table: prefer 'expenses', fallback to 'expence'
+    final client = Supabase.instance.client;
+    final uid = client.auth.currentUser?.id;
+    String chosen = 'expenses';
+    if (uid == null) return chosen;
+    try {
+      await client.from('expenses').select('id').eq('user_id', uid).limit(1);
+      chosen = 'expenses';
+    } catch (_) {
+      try {
+        await client.from('expence').select('id').eq('user_id', uid).limit(1);
+        chosen = 'expence';
+      } catch (_) {
+        chosen = 'expenses';
+      }
+    }
+    await meta.put(_expenseTableKey, chosen);
+    return chosen;
+  }
+
   Future<void> syncNow() async {
     if (_isSyncing) return;
     _isSyncing = true;
@@ -86,10 +114,42 @@ class SyncService {
       try {
         switch (type) {
           case 'expense.add':
-            await Supabase.instance.client.from('expenses').insert({
-              'user_id': userId,
-              'data': payload,
-            });
+            {
+              final expensesTable = await _getExpenseTableName();
+              final String rid = (payload['id']?.toString() ?? '');
+              if (rid.isNotEmpty) {
+                final exist = await Supabase.instance.client
+                    .from(expensesTable)
+                    .select('id')
+                    .eq('user_id', userId)
+                    .eq('data->>id', rid)
+                    .maybeSingle();
+                if (exist == null) {
+                  await Supabase.instance.client.from(expensesTable).insert({
+                    'user_id': userId,
+                    'data': payload,
+                  });
+                }
+              } else {
+                await Supabase.instance.client.from(expensesTable).insert({
+                  'user_id': userId,
+                  'data': payload,
+                });
+              }
+            }
+            break;
+          case 'expense.delete':
+            {
+              final expensesTable = await _getExpenseTableName();
+              final String rid = (payload['id']?.toString() ?? '');
+              if (rid.isNotEmpty) {
+                await Supabase.instance.client
+                    .from(expensesTable)
+                    .delete()
+                    .eq('user_id', userId)
+                    .eq('data->>id', rid);
+              }
+            }
             break;
           case 'wallet.tx.add':
             await Supabase.instance.client.from('transactions').insert({
@@ -97,29 +157,89 @@ class SyncService {
               'data': payload,
             });
             break;
-          case 'wallet.balance.update':
-            // Store the latest wallet snapshot as a row
-            await Supabase.instance.client.from('wallets').insert({
-              'user_id': userId,
-              'data': payload,
-            });
-            break;
-          case 'wallets.save':
-            // Batch insert all wallets as separate rows
-            final List list = payload['items'] as List? ?? [];
-            if (list.isNotEmpty) {
-              for (final w in list) {
+          case 'wallet.add':
+            {
+              final String wid = (payload['id']?.toString() ?? '');
+              if (wid.isNotEmpty) {
+                final exist = await Supabase.instance.client
+                    .from('wallets')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .eq('data->>id', wid)
+                    .maybeSingle();
+                if (exist == null) {
+                  await Supabase.instance.client.from('wallets').insert({
+                    'user_id': userId,
+                    'data': payload,
+                  });
+                }
+              } else {
                 await Supabase.instance.client.from('wallets').insert({
                   'user_id': userId,
-                  'data': Map<String, dynamic>.from(w as Map),
+                  'data': payload,
                 });
               }
             }
             break;
+          case 'wallet.update':
+            {
+              final String wid = (payload['id']?.toString() ?? '');
+              if (wid.isNotEmpty) {
+                final exist = await Supabase.instance.client
+                    .from('wallets')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .eq('data->>id', wid)
+                    .maybeSingle();
+                if (exist == null) {
+                  await Supabase.instance.client.from('wallets').insert({
+                    'user_id': userId,
+                    'data': payload,
+                  });
+                } else {
+                  // Optionally update existing JSON (if needed). For append-only history, we skip.
+                }
+              } else {
+                await Supabase.instance.client.from('wallets').insert({
+                  'user_id': userId,
+                  'data': payload,
+                });
+              }
+            }
+            break;
+          case 'wallet.delete':
+            {
+              final String wid = (payload['id']?.toString() ?? '');
+              final String? name = payload['name'] as String?;
+              if (wid.isNotEmpty) {
+                await Supabase.instance.client
+                    .from('wallets')
+                    .delete()
+                    .eq('user_id', userId)
+                    .eq('data->>id', wid);
+              } else if (name != null && name.isNotEmpty) {
+                // Fetch ids of rows with matching name (case-insensitive) and delete them
+                final nm = name.trim();
+                final List rows = await Supabase.instance.client
+                    .from('wallets')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .ilike('data->>name', nm);
+                if (rows.isNotEmpty) {
+                  final ids = rows.map((r) => (r as Map)['id']).toList();
+          // Build an IN filter via CSV string because in_ may not be available
+          final csv = ids.join(',');
+          await Supabase.instance.client
+            .from('wallets')
+            .delete()
+            .filter('id', 'in', '($csv)');
+                }
+              }
+            }
+            break;
           case 'budgets.save':
-            // Batch insert budgets items as separate rows
-            final List list = payload['items'] as List? ?? [];
-            if (list.isNotEmpty) {
+            {
+              final List list = payload['items'] as List? ?? [];
               for (final b in list) {
                 await Supabase.instance.client.from('budgets').insert({
                   'user_id': userId,
@@ -129,8 +249,8 @@ class SyncService {
             }
             break;
           case 'subscriptions.save':
-            final List list = payload['items'] as List? ?? [];
-            if (list.isNotEmpty) {
+            {
+              final List list = payload['items'] as List? ?? [];
               for (final s in list) {
                 await Supabase.instance.client.from('subscriptions').insert({
                   'user_id': userId,
@@ -178,12 +298,23 @@ class SyncService {
 
     // Pull expenses
     try {
+      final expensesTable = await _getExpenseTableName();
       final expRows = await client
-          .from('expenses')
+          .from(expensesTable)
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
-      final exp = _unwrap(expRows);
+      final raw = _unwrap(expRows);
+      // Dedupe by id (preferred) or composite descriptor to avoid duplicates, keep newest
+      final seen = <String>{};
+      final exp = <Map<String, dynamic>>[];
+      for (final e in raw) {
+        final id = (e['id']?.toString() ?? '').trim();
+        final key = id.isNotEmpty
+            ? 'id:$id'
+            : 'k:${e['date']}|${e['desc']}|${e['amount']}|${e['category']}|${e['wallet']}';
+        if (seen.add(key)) exp.add(e);
+      }
       await _writeIfUseful('expensesBox', 'expenses', exp);
   } catch (e) { _lastError = e.toString(); _saveLastError(); }
 
@@ -205,7 +336,26 @@ class SyncService {
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
-      final wallets = _unwrap(walletRows);
+      final rawWallets = _unwrap(walletRows);
+      // Dedupe by id (preferred) or normalized name, keeping the newest (since list is desc)
+      final Set<String> seen = {};
+      final List<Map<String, dynamic>> wallets = [];
+      for (final w in rawWallets) {
+        final id = (w['id']?.toString() ?? '');
+        final nm = (w['name']?.toString() ?? '').trim().toLowerCase();
+        final key = id.isNotEmpty
+            ? 'id:$id'
+            : (nm.isNotEmpty ? 'name:$nm' : '');
+        if (key.isEmpty) {
+          // If no key fields, just include once
+          wallets.add(w);
+          continue;
+        }
+        if (!seen.contains(key)) {
+          seen.add(key);
+          wallets.add(w);
+        }
+      }
       await _writeIfUseful('walletsBox', 'wallets', wallets);
   } catch (e) { _lastError = e.toString(); _saveLastError(); }
 

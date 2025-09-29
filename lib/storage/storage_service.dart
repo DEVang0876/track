@@ -1,8 +1,10 @@
 
   import 'package:hive/hive.dart';
   import 'package:trackizer/storage/sync_service.dart';
+  import 'package:uuid/uuid.dart';
 
 class StorageService {
+  static const _uuid = Uuid();
   static Future<void> saveBudgets(List<Map<String, dynamic>> budgets) async {
     final box = await Hive.openBox('budgetsBox');
     await box.put('budgets', budgets);
@@ -36,6 +38,10 @@ class StorageService {
         )),
       );
     }
+    // Ensure a stable unique id for dedupe/delete
+    if (!(expense.containsKey('id')) || (expense['id']?.toString().isEmpty ?? true)) {
+      expense['id'] = _uuid.v4();
+    }
     // Insert at the start
     expenses.insert(0, expense);
     await box.put('expenses', expenses);
@@ -43,12 +49,46 @@ class StorageService {
     await SyncService().enqueue('expense.add', expense);
   }
 
+  static Future<void> deleteExpenseById(String id) async {
+    final box = await Hive.openBox('expensesBox');
+    final data = box.get('expenses', defaultValue: []);
+    List<Map<String, dynamic>> expenses = [];
+    if (data != null) {
+      expenses = List<Map<String, dynamic>>.from(
+        (data as List).map((item) => Map<String, dynamic>.from(
+          (item as Map).map((key, value) => MapEntry(key.toString(), value)),
+        )),
+      );
+    }
+    expenses.removeWhere((e) => (e['id']?.toString() ?? '') == id);
+    await box.put('expenses', expenses);
+    // Enqueue delete for remote
+    if (id.isNotEmpty) {
+      await SyncService().enqueue('expense.delete', { 'id': id });
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> loadExpenses() async {
     final box = await Hive.openBox('expensesBox');
     final data = box.get('expenses', defaultValue: []);
-    return (data as List)
+    final List<Map<String, dynamic>> items = (data as List)
         .map((e) => Map<String, dynamic>.from(e as Map))
         .toList();
+    // Backfill missing IDs for legacy expenses so future deletes/dedupes work
+    bool changed = false;
+    for (var i = 0; i < items.length; i++) {
+      final m = items[i];
+      final id = (m['id']?.toString() ?? '').trim();
+      if (id.isEmpty) {
+        m['id'] = _uuid.v4();
+        items[i] = m;
+        changed = true;
+      }
+    }
+    if (changed) {
+      await box.put('expenses', items);
+    }
+    return items;
   }
 
   static Future<void> saveSubscriptions(List<Map<String, dynamic>> subs) async {
