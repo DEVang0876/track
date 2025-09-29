@@ -291,29 +291,25 @@ class _HomeViewState extends State<HomeView> {
 
     // Filtered lists for each tab
     final walletEntries = allEntries.where((e) => e["type"] == "Wallet Added" || e["type"] == "Wallet Deleted").toList();
-    // Show both local expenses and transaction entries marked as Expense in the Expenses tab
+    // Show only actual expense records to avoid duplication with 'Expense' transactions
     List<Map<String, dynamic>> expenseEntries = [
       ...allEntries.where((e) => e["_entryType"] == "expense"),
-      ...allEntries.where((e) => e["_entryType"] == "transaction" && (e["type"] == "Expense"))
-          .map((t) => {
-                // Map transaction to expense-like structure for display
-                "desc": t["desc"],
-                "amount": (t["amount"] ?? '').toString(),
-                "date": t["date"],
-                "wallet": t["wallet"],
-                // Some transaction payloads may carry a category; if not, leave empty
-                "category": t["category"] ?? '',
-                "afterBalance": t["balance"],
-                "_entryType": "expense",
-              })
     ];
     // UI-level dedupe for expenses to avoid visual repeats
     final expSeen = <String>{};
     expenseEntries = expenseEntries.where((e) {
       final id = (e['id']?.toString() ?? '').trim();
+      final normAmt = () {
+        final a = e['amount'];
+        double v;
+        if (a is num) v = a.toDouble();
+        else if (a is String) v = double.tryParse(a) ?? 0.0;
+        else v = 0.0;
+        return v.toStringAsFixed(2);
+      }();
       final key = id.isNotEmpty
           ? 'id:$id'
-          : 'k:${e['date']}|${e['desc']}|${e['amount']}|${e['category']}|${e['wallet']}';
+          : 'k:${e['date']}|${e['desc']}|$normAmt|${e['category']}|${e['wallet']}';
       if (expSeen.contains(key)) return false;
       expSeen.add(key);
       return true;

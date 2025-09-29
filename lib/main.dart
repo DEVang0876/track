@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'common/app_settings.dart';
@@ -18,6 +19,9 @@ Future<void> main() async {
       anonKey: SupabaseConfig.supabaseAnonKey,
     );
     await SyncService().init();
+    // Kick off an early sync so local storage reconciles with cloud on startup
+    // (no-op if not logged in)
+    unawaited(SyncService().syncNow());
   }
   runApp(
     ChangeNotifierProvider(

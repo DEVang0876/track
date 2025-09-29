@@ -42,17 +42,55 @@ class _SpendingBudgetsViewState extends State<SpendingBudgetsView> {
   }
 
   Future<void> _loadCategories() async {
-    categoryArr = await StorageService.loadBudgets();
+    final loaded = await StorageService.loadBudgets();
+    // Deduplicate by normalized name (trim/lower), keep first occurrence
+    final seen = <String>{};
+    final unique = <Map<String, dynamic>>[];
+    for (final c in loaded) {
+      final name = (c["name"]?.toString() ?? '').trim();
+      if (name.isEmpty) continue;
+      final key = name.toLowerCase();
+      if (seen.add(key)) {
+        unique.add({
+          "name": name,
+          "color": c["color"],
+        });
+      }
+    }
+    categoryArr = unique;
     setState(() {});
   }
 
   Future<void> _saveCategories() async {
+    // Deduplicate before save
+    final seen = <String>{};
+    final unique = <Map<String, dynamic>>[];
+    for (final c in categoryArr) {
+      final name = (c["name"]?.toString() ?? '').trim();
+      if (name.isEmpty) continue;
+      final key = name.toLowerCase();
+      if (seen.add(key)) unique.add({"name": name, "color": c["color"]});
+    }
+    categoryArr = unique;
     await StorageService.saveBudgets(categoryArr);
     await _loadCategories(); // reload after save to ensure persistence
   }
 
   void _editCategory(int idx, Map<String, dynamic> newCategory) async {
-    categoryArr[idx]["name"] = newCategory["name"];
+    final newName = (newCategory["name"]?.toString() ?? '').trim();
+    if (newName.isEmpty) return;
+    final newKey = newName.toLowerCase();
+    final existsAt = categoryArr.indexWhere((c) => (c["name"]?.toString() ?? '').trim().toLowerCase() == newKey);
+    if (existsAt != -1 && existsAt != idx) {
+      // Duplicate name; notify and bail
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category with same name already exists.')),
+        );
+      }
+      return;
+    }
+    categoryArr[idx]["name"] = newName;
     categoryArr[idx]["color"] = newCategory["color"];
     await _saveCategories();
   }
@@ -64,25 +102,44 @@ class _SpendingBudgetsViewState extends State<SpendingBudgetsView> {
   // Removed misplaced code blocks outside build method
   @override
   Widget build(BuildContext context) {
-    // Calculate spend per category
-    Map<String, double> spentPerCategory = {};
+    // Calculate spend per normalized category
+    final Map<String, double> spentPerCategory = {};
+    final Map<String, String> displayNameFor = {};
+    final Map<String, Color> colorFor = {};
     double totalSpent = 0;
     for (var exp in expensesArr) {
-      final cat = exp["category"];
-      final amt = double.tryParse(exp["amount"].toString()) ?? 0;
-      if (cat != null) {
-        spentPerCategory[cat] = (spentPerCategory[cat] ?? 0) + amt;
-        totalSpent += amt;
-      }
+      final rawCat = (exp["category"]?.toString() ?? '').trim();
+      if (rawCat.isEmpty) continue;
+      final key = rawCat.toLowerCase();
+      final amt = double.tryParse(exp["amount"].toString()) ?? 0.0;
+      spentPerCategory[key] = (spentPerCategory[key] ?? 0.0) + amt;
+      totalSpent += amt;
+      // default display name if not present in categories
+      displayNameFor.putIfAbsent(key, () => rawCat);
     }
-    List<ArcValueModel> arcData = [];
+    // Seed display names and colors from category list (deduped)
     for (int i = 0; i < categoryArr.length; i++) {
-      var cat = categoryArr[i];
-      final name = cat["name"];
-      final color = cat["color"] is int ? Color(cat["color"]) : _categoryColors[i % _categoryColors.length];
-      final spent = spentPerCategory[name] ?? 0;
-      final percent = totalSpent > 0 ? spent / totalSpent : 0;
+      final name = (categoryArr[i]["name"]?.toString() ?? '').trim();
+      if (name.isEmpty) continue;
+      final key = name.toLowerCase();
+      final color = categoryArr[i]["color"] is int
+          ? Color(categoryArr[i]["color"])
+          : _categoryColors[i % _categoryColors.length];
+      displayNameFor[key] = name; // prefer configured case
+      colorFor[key] = color;
+    }
+    // Build arc data only for categories with spend > 0
+    final keysWithSpend = spentPerCategory.keys.toList();
+    keysWithSpend.sort();
+    final List<ArcValueModel> arcData = [];
+    int colorIdx = 0;
+    for (final key in keysWithSpend) {
+      final spent = spentPerCategory[key] ?? 0.0;
+      if (spent <= 0) continue;
+      final color = colorFor[key] ?? _categoryColors[colorIdx++ % _categoryColors.length];
+      final percent = totalSpent > 0 ? spent / totalSpent : 0.0;
       arcData.add(ArcValueModel(color: color, value: percent * 180));
+      colorFor.putIfAbsent(key, () => color); // ensure legend matches color
     }
     return Scaffold(
       backgroundColor: TColor.gray,
@@ -124,7 +181,7 @@ class _SpendingBudgetsViewState extends State<SpendingBudgetsView> {
                 ],
               ),
               SizedBox(height: 12),
-              if (categoryArr.isNotEmpty && totalSpent > 0)
+              if (spentPerCategory.isNotEmpty && totalSpent > 0)
                 Card(
                   color: TColor.gray80,
                   elevation: 4,
@@ -141,11 +198,11 @@ class _SpendingBudgetsViewState extends State<SpendingBudgetsView> {
                           ),
                         ),
                         SizedBox(height: 14),
-                        ...categoryArr.map((cat) {
-                          final name = cat["name"];
-                          final color = cat["color"] is int ? Color(cat["color"]) : _categoryColors[categoryArr.indexOf(cat) % _categoryColors.length];
-                          final spent = spentPerCategory[name] ?? 0;
-                          final percent = totalSpent > 0 ? spent / totalSpent : 0;
+                        ...keysWithSpend.map((key) {
+                          final name = displayNameFor[key] ?? key;
+                          final color = colorFor[key] ?? TColor.primary20;
+                          final spent = spentPerCategory[key] ?? 0.0;
+                          final percent = totalSpent > 0 ? spent / totalSpent : 0.0;
                           return Padding(
                             padding: EdgeInsets.symmetric(vertical: 4.0),
                             child: Row(
@@ -217,17 +274,22 @@ class _SpendingBudgetsViewState extends State<SpendingBudgetsView> {
                               ElevatedButton(
                                 onPressed: () {
                                   final name = controller.text.trim();
-                                  if (name.isNotEmpty) {
-                                    final color = _categoryColors[categoryArr.length % _categoryColors.length];
-                                    setState(() {
-                                      categoryArr.add({
-                                        "name": name,
-                                        "color": color.value,
-                                      });
-                                    });
-                                    _saveCategories();
-                                    Navigator.pop(context);
+                                  if (name.isEmpty) return;
+                                  final key = name.toLowerCase();
+                                  final exists = categoryArr.any((c) => (c['name']?.toString() ?? '').trim().toLowerCase() == key);
+                                  if (exists) {
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category already exists.')));
+                                    return;
                                   }
+                                  final color = _categoryColors[categoryArr.length % _categoryColors.length];
+                                  setState(() {
+                                    categoryArr.add({
+                                      "name": name,
+                                      "color": color.value,
+                                    });
+                                  });
+                                  _saveCategories();
+                                  Navigator.pop(context);
                                 },
                                 child: Text('Add'),
                               ),

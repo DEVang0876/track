@@ -23,8 +23,23 @@ class StorageService {
   }
   static Future<void> saveExpenses(List<Map<String, dynamic>> expenses) async {
     final box = await Hive.openBox('expensesBox');
-    // Always save with newest first
-    await box.put('expenses', List<Map<String, dynamic>>.from(expenses));
+    // Deduplicate before saving (prefer first occurrence, typically newest-first lists)
+    final seen = <String>{};
+    final cleaned = <Map<String, dynamic>>[];
+    for (final e in expenses) {
+      final id = (e['id']?.toString() ?? '').trim();
+      final normAmt = () {
+        final a = e['amount'];
+        double v;
+        if (a is num) v = a.toDouble(); else if (a is String) v = double.tryParse(a) ?? 0.0; else v = 0.0;
+        return v.toStringAsFixed(2);
+      }();
+      final key = id.isNotEmpty
+          ? 'id:$id'
+          : 'k:${e['date']}|${e['desc']}|$normAmt|${e['category']}|${e['wallet']}';
+      if (seen.add(key)) cleaned.add(e);
+    }
+    await box.put('expenses', cleaned);
   }
 
   static Future<void> addExpense(Map<String, dynamic> expense) async {
@@ -85,10 +100,26 @@ class StorageService {
         changed = true;
       }
     }
-    if (changed) {
-      await box.put('expenses', items);
+    // Local dedupe: prefer first occurrence (assumes list already newest-first typically)
+    final seen = <String>{};
+    final cleaned = <Map<String, dynamic>>[];
+    for (final e in items) {
+      final id = (e['id']?.toString() ?? '').trim();
+      final normAmt = () {
+        final a = e['amount'];
+        double v;
+        if (a is num) v = a.toDouble(); else if (a is String) v = double.tryParse(a) ?? 0.0; else v = 0.0;
+        return v.toStringAsFixed(2);
+      }();
+      final key = id.isNotEmpty
+          ? 'id:$id'
+          : 'k:${e['date']}|${e['desc']}|$normAmt|${e['category']}|${e['wallet']}';
+      if (seen.add(key)) cleaned.add(e);
     }
-    return items;
+    if (changed || cleaned.length != items.length) {
+      await box.put('expenses', cleaned);
+    }
+    return cleaned;
   }
 
   static Future<void> saveSubscriptions(List<Map<String, dynamic>> subs) async {
