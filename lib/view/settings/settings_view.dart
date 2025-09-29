@@ -5,10 +5,10 @@ import '../../common/color_extension.dart';
 import '../../common_widget/icon_item_row.dart';
 import 'package:trackizer/storage/sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:trackizer/common/supabase_config.dart';
 import 'package:trackizer/storage/storage_service.dart';
 import 'package:trackizer/common/supabase_checks.dart';
 import 'package:trackizer/common/net_diagnostics.dart';
+import 'package:trackizer/common/supabase_config.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -249,6 +249,36 @@ class _SettingsViewState extends State<SettingsView> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Row(children: [
+                                  const Icon(Icons.error_outline, color: Colors.white70),
+                                  const SizedBox(width: 8),
+                                  Text("Last sync error", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
+                                ]),
+                                FutureBuilder<String?>(
+                                  future: SyncService.getLastSyncError(),
+                                  builder: (context, snap) {
+                                    final msg = (snap.data ?? 'none');
+                                    return TextButton(
+                                      onPressed: () {
+                                        if (msg != 'none') {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text(msg), duration: const Duration(seconds: 6)),
+                                          );
+                                        }
+                                      },
+                                      child: Text(msg.length > 22 ? msg.substring(0, 22) + '…' : msg),
+                                    );
+                                  },
+                                )
+                              ],
+                            ),
+                          ),
+                        if (supaEnabled)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(children: [
                                   const Icon(Icons.verified, color: Colors.white70),
                                   const SizedBox(width: 8),
                                   Text("Check cloud setup", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
@@ -273,6 +303,31 @@ class _SettingsViewState extends State<SettingsView> {
                                     );
                                   },
                                   child: const Text('Verify'),
+                                )
+                              ],
+                            ),
+                          ),
+                        if (supaEnabled)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(children: [
+                                  const Icon(Icons.link, color: Colors.white70),
+                                  const SizedBox(width: 8),
+                                  Text("Supabase URL", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
+                                ]),
+                                Flexible(
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      SupabaseConfig.effectiveUrl,
+                                      textAlign: TextAlign.right,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(color: Colors.white70),
+                                    ),
+                                  ),
                                 )
                               ],
                             ),

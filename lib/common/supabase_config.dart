@@ -4,7 +4,7 @@ class SupabaseConfig {
   // Defaults are embedded so you don't need to pass anything manually.
   static const String supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://oywinxmbquxjmzkivvys.supabase.co',
+    defaultValue: 'https://oywinxmbquxjmzkivyvs.supabase.co',
   );
   static const String supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
@@ -21,11 +21,11 @@ class SupabaseConfig {
   static String get effectiveUrl {
     final configured = _normalizeUrl(supabaseUrl);
     final ref = projectRefFromKey;
-    if (ref == null) return configured;
-    final derived = 'https://$ref.supabase.co';
-    // If configured is empty or doesn't contain the ref, prefer the derived URL.
-    if (configured.isEmpty || !configured.contains(ref)) {
-      return derived;
+    // Prefer the configured URL when provided to avoid accidental overrides.
+    if (configured.isNotEmpty) return configured;
+    // Otherwise, derive from anon key ref if available.
+    if (ref != null && ref.isNotEmpty) {
+      return 'https://$ref.supabase.co';
     }
     return configured;
   }

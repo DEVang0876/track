@@ -184,6 +184,31 @@ class _MainTabViewState extends State<MainTabView> {
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        // Build unique option lists and guard selected values
+                                        Builder(builder: (context) {
+                                          final categoryNames = categories
+                                              .map((c) => (c['name'] as String?)?.trim())
+                                              .where((e) => (e != null && e.isNotEmpty))
+                                              .cast<String>()
+                                              .toSet()
+                                              .toList();
+                                          final walletNames = wallets
+                                              .map((w) => (w['name'] as String?)?.trim())
+                                              .where((e) => (e != null && e.isNotEmpty))
+                                              .cast<String>()
+                                              .toSet()
+                                              .toList();
+                                          if (selectedCategory != null && !categoryNames.contains(selectedCategory)) {
+                                            selectedCategory = null;
+                                          }
+                                          if (selectedWallet != null && !walletNames.contains(selectedWallet)) {
+                                            selectedWallet = null;
+                                          }
+                                          // Initialize sensible defaults if nothing is chosen yet
+                                          selectedCategory ??= categoryNames.isNotEmpty ? categoryNames.first : null;
+                                          selectedWallet ??= walletNames.isNotEmpty ? walletNames.first : null;
+                                          return const SizedBox.shrink();
+                                        }),
                                         Row(
                                           children: [
                                             CircleAvatar(
@@ -305,7 +330,7 @@ class _MainTabViewState extends State<MainTabView> {
                                         ),
                                         SizedBox(height: 14),
                                         if (type == 'expense')
-                                          categories.isNotEmpty
+                                          ((categories.map((c) => c['name']).toSet().length) > 0)
                                               ? DropdownButtonFormField<String>(
                                                   value: selectedCategory,
                                                   decoration: InputDecoration(
@@ -322,7 +347,13 @@ class _MainTabViewState extends State<MainTabView> {
                                                     ),
                                                   ),
                                                   dropdownColor: Color(0xFF23243a),
-                                                  items: categories.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(value: c['name'] as String, child: Text(c['name'], style: TextStyle(color: Colors.white)))).toList(),
+                                                  items: categories
+                                                      .map((c) => (c['name'] as String?)?.trim())
+                                                      .where((e) => (e != null && e.isNotEmpty))
+                                                      .cast<String>()
+                                                      .toSet()
+                                                      .map<DropdownMenuItem<String>>((name) => DropdownMenuItem<String>(value: name, child: Text(name, style: TextStyle(color: Colors.white))))
+                                                      .toList(),
                                                   onChanged: (val) => setState(() => selectedCategory = val),
                                                 )
                                               : Padding(
@@ -346,7 +377,13 @@ class _MainTabViewState extends State<MainTabView> {
                                               ),
                                             ),
                                             dropdownColor: Color(0xFF23243a),
-                                            items: wallets.map<DropdownMenuItem<String>>((w) => DropdownMenuItem<String>(value: w['name'] as String, child: Text(w['name'], style: TextStyle(color: Colors.white)))).toList(),
+                                            items: wallets
+                                                .map((w) => (w['name'] as String?)?.trim())
+                                                .where((e) => (e != null && e.isNotEmpty))
+                                                .cast<String>()
+                                                .toSet()
+                                                .map<DropdownMenuItem<String>>((name) => DropdownMenuItem<String>(value: name, child: Text(name, style: TextStyle(color: Colors.white))))
+                                                .toList(),
                                             onChanged: (val) => setState(() => selectedWallet = val),
                                           )
                                         else
@@ -393,16 +430,14 @@ class _MainTabViewState extends State<MainTabView> {
                         if (result != null && result["desc"] != null && result["amount"] != null && result["wallet"] != null) {
                           // If expense, save to persistent expenses with category
                           if (result["type"] == "expense" && result["category"] != null) {
-                            List<Map<String, dynamic>> expenses = await StorageService.loadExpenses();
-                            // Always use current time for new entry
-                            expenses.insert(0, {
+                            // Persist to local and enqueue a single expense add for cloud sync
+                            await StorageService.addExpense({
                               "desc": result["desc"],
                               "amount": result["amount"],
                               "date": DateTime.now().toIso8601String(),
                               "wallet": result["wallet"],
-                              "category": result["category"]
+                              "category": result["category"],
                             });
-                            await StorageService.saveExpenses(expenses);
                           }
                           // Update wallet balance
                           final walletName = result["wallet"];

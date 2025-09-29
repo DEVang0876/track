@@ -14,6 +14,7 @@ class SyncService {
   static const _uuid = Uuid();
   StreamSubscription<List<ConnectivityResult>>? _connSub;
   bool _isSyncing = false;
+  String? _lastError;
 
   Future<void> init() async {
     await Hive.openBox(_queueBoxName);
@@ -65,6 +66,8 @@ class SyncService {
 
       await _pushQueue(userId);
       await _pullLatest(userId);
+      _lastError = null;
+      _saveLastError();
     } finally {
       _isSyncing = false;
     }
@@ -139,8 +142,10 @@ class SyncService {
         }
         // Remove from queue on success
         await box.delete(key);
-      } catch (_) {
+      } catch (e) {
         // Leave in queue to retry later
+        _lastError = e.toString();
+        _saveLastError();
       }
     }
   }
@@ -180,7 +185,7 @@ class SyncService {
           .order('created_at', ascending: false);
       final exp = _unwrap(expRows);
       await _writeIfUseful('expensesBox', 'expenses', exp);
-    } catch (_) {}
+  } catch (e) { _lastError = e.toString(); _saveLastError(); }
 
     // Pull transactions
     try {
@@ -191,7 +196,7 @@ class SyncService {
           .order('created_at', ascending: false);
       final tx = _unwrap(txRows);
       await _writeIfUseful('walletsBox', 'transactions', tx);
-    } catch (_) {}
+  } catch (e) { _lastError = e.toString(); _saveLastError(); }
 
     // Pull wallets
     try {
@@ -202,7 +207,7 @@ class SyncService {
           .order('created_at', ascending: false);
       final wallets = _unwrap(walletRows);
       await _writeIfUseful('walletsBox', 'wallets', wallets);
-    } catch (_) {}
+  } catch (e) { _lastError = e.toString(); _saveLastError(); }
 
     // Pull budgets
     try {
@@ -213,7 +218,7 @@ class SyncService {
           .order('created_at', ascending: false);
       final budgets = _unwrap(budgetRows);
       await _writeIfUseful('budgetsBox', 'budgets', budgets);
-    } catch (_) {}
+  } catch (e) { _lastError = e.toString(); _saveLastError(); }
 
     // Pull subscriptions
     try {
@@ -224,6 +229,20 @@ class SyncService {
           .order('created_at', ascending: false);
       final subs = _unwrap(subRows);
       await _writeIfUseful('subsBox', 'subs', subs);
+    } catch (e) { _lastError = e.toString(); _saveLastError(); }
+  }
+
+  Future<void> _saveLastError() async {
+    try {
+      final box = await Hive.openBox('syncMetaBox');
+      await box.put('lastError', _lastError);
     } catch (_) {}
+  }
+
+  static Future<String?> getLastSyncError() async {
+    try {
+      final box = await Hive.openBox('syncMetaBox');
+      return box.get('lastError') as String?;
+    } catch (_) { return null; }
   }
 }
