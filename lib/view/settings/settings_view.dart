@@ -5,6 +5,7 @@ import '../../common/color_extension.dart';
 import '../../common_widget/icon_item_row.dart';
 import 'package:trackizer/storage/sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:trackizer/common/supabase_config.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -23,6 +24,9 @@ class _SettingsViewState extends State<SettingsView> {
 
   @override
   Widget build(BuildContext context) {
+    final bool supaEnabled = SupabaseConfig.isConfigured;
+    final bool isLoggedIn = supaEnabled &&
+        (Supabase.instance.client.auth.currentUser != null);
     return Scaffold(
       backgroundColor: TColor.gray,
       body: SingleChildScrollView(
@@ -179,23 +183,24 @@ class _SettingsViewState extends State<SettingsView> {
                             });
                           },
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(children: [
-                                const Icon(Icons.sync, color: Colors.white70),
-                                const SizedBox(width: 8),
-                                Text("Sync now", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
-                              ]),
-                              TextButton(
-                                onPressed: () async { await SyncService().syncNow(); },
-                                child: const Text('Run'),
-                              )
-                            ],
+                        if (supaEnabled)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(children: [
+                                  const Icon(Icons.sync, color: Colors.white70),
+                                  const SizedBox(width: 8),
+                                  Text("Sync now", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
+                                ]),
+                                TextButton(
+                                  onPressed: () async { await SyncService().syncNow(); },
+                                  child: const Text('Run'),
+                                )
+                              ],
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -279,23 +284,24 @@ class _SettingsViewState extends State<SettingsView> {
                           icon: "assets/img/font.png",
                           value: "Inter",
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(children: [
-                                const Icon(Icons.logout, color: Colors.white70),
-                                const SizedBox(width: 8),
-                                Text("Logout", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
-                              ]),
-                              TextButton(
-                                onPressed: () async { await Supabase.instance.client.auth.signOut(); if (mounted) Navigator.pop(context); },
-                                child: const Text('Sign out'),
-                              )
-                            ],
+                        if (isLoggedIn)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(children: [
+                                  const Icon(Icons.logout, color: Colors.white70),
+                                  const SizedBox(width: 8),
+                                  Text("Logout", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
+                                ]),
+                                TextButton(
+                                  onPressed: () async { await Supabase.instance.client.auth.signOut(); if (mounted) Navigator.pop(context); },
+                                  child: const Text('Sign out'),
+                                )
+                              ],
+                            ),
                           ),
-                        ),
                         
                       ],
                     ),
