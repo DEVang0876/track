@@ -33,19 +33,11 @@ class _HomeViewState extends State<HomeView> {
   Future<void> _attachWatchers() async {
     try {
       final walletsBox = await Hive.openBox('walletsBox');
-      _walletsWatch = walletsBox.watch().listen((event) {
-        if (event.key == 'wallets' || event.key == 'transactions') {
-          _loadAllData();
-        }
-      });
+      _walletsWatch = walletsBox.watch().listen((_) => _loadAllData());
     } catch (_) {}
     try {
       final expensesBox = await Hive.openBox('expensesBox');
-      _expensesWatch = expensesBox.watch().listen((event) {
-        if (event.key == 'expenses') {
-          _loadAllData();
-        }
-      });
+      _expensesWatch = expensesBox.watch().listen((_) => _loadAllData());
     } catch (_) {}
   }
 
@@ -319,8 +311,13 @@ class _HomeViewState extends State<HomeView> {
     // Compute totalWallets for header
     double totalWallets = 0.0;
     for (var w in wallets) {
-      if (w["balance"] != null) {
-        totalWallets += (w["balance"] as num).toDouble();
+      final b = w["balance"];
+      if (b == null) continue;
+      if (b is num) {
+        totalWallets += b.toDouble();
+      } else if (b is String) {
+        final v = double.tryParse(b);
+        if (v != null) totalWallets += v;
       }
     }
 

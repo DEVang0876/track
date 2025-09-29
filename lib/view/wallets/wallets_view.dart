@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:hive/hive.dart';
 import 'package:trackizer/storage/wallet_service.dart';
 import 'package:trackizer/common/color_extension.dart';
 import 'package:trackizer/view/settings/settings_view.dart';
@@ -18,11 +20,20 @@ class _WalletsViewState extends State<WalletsView> {
   List<Map<String, dynamic>> wallets = [];
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _balanceController = TextEditingController();
+  StreamSubscription? _walletsWatch;
 
   @override
   void initState() {
     super.initState();
     _loadWallets();
+    _attachWatcher();
+  }
+
+  Future<void> _attachWatcher() async {
+    try {
+      final box = await Hive.openBox('walletsBox');
+      _walletsWatch = box.watch().listen((_) => _loadWallets());
+    } catch (_) {}
   }
 
 
@@ -44,9 +55,12 @@ class _WalletsViewState extends State<WalletsView> {
     setState(() {});
   }
 
-  Future<void> _saveWallets() async {
-    await WalletService.saveWallets(wallets);
+  @override
+  void dispose() {
+    _walletsWatch?.cancel();
+    super.dispose();
   }
+
 
   void _addWallet() async {
     final name = _nameController.text.trim();
@@ -118,19 +132,32 @@ class _WalletsViewState extends State<WalletsView> {
               onPressed: () async {
                 final amount = double.tryParse(_amountController.text.trim()) ?? 0.0;
                 if (amount > 0.0) {
-                  final oldBalance = wallets[idx]['balance'] ?? 0.0;
+                  // Parse old balance robustly
+                  final bal = wallets[idx]['balance'];
+                  double oldBalance;
+                  if (bal is num) {
+                    oldBalance = bal.toDouble();
+                  } else if (bal is String) {
+                    oldBalance = double.tryParse(bal) ?? 0.0;
+                  } else {
+                    oldBalance = 0.0;
+                  }
                   final newBalance = oldBalance + amount;
+                  final walletId = (wallets[idx]['id']?.toString() ?? '');
                   print('Borrow: old balance = \\${oldBalance}, amount = \\${amount}, new balance = \\${newBalance}');
-                  setState(() {
-                    wallets[idx]['balance'] = newBalance;
-                  });
-                  await _saveWallets();
+                  if (walletId.isNotEmpty) {
+                    await WalletService.updateWalletBalanceById(walletId, newBalance);
+                  } else {
+                    await WalletService.updateWalletBalance(wallets[idx]['name'], newBalance);
+                  }
+                  await _loadWallets();
                   // Record transaction as positive for borrow
                   await WalletService.addTransaction({
                     "type": "Borrowed",
                     "wallet": wallets[idx]['name'],
                     "amount": amount,
                     "date": DateTime.now().toIso8601String(),
+                    "balance": newBalance,
                   });
                   if (widget.onWalletsChanged != null) widget.onWalletsChanged!();
                   if (mounted) {

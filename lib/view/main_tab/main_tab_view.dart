@@ -1,5 +1,6 @@
 import 'package:trackizer/storage/wallet_service.dart';
 import 'package:trackizer/storage/storage_service.dart';
+import 'package:hive/hive.dart';
 import '../wallets/wallets_view.dart';
 import 'package:flutter/material.dart';
 // import 'package:trackizer/view/add_subscription/add_subscription_view.dart';
@@ -156,6 +157,7 @@ class _MainTabViewState extends State<MainTabView> {
                             final TextEditingController _dateController = TextEditingController(text: DateTime.now().toString().split(' ')[0]);
                             String type = 'expense';
                             String? selectedWallet = wallets.isNotEmpty ? wallets[0]['name'] : null;
+                            String? selectedWalletId = wallets.isNotEmpty ? (wallets[0]['id']?.toString()) : null;
                             String? selectedCategory = categories.isNotEmpty ? categories[0]['name'] : null;
                             return StatefulBuilder(
                               builder: (context, setState) => AlertDialog(
@@ -207,6 +209,14 @@ class _MainTabViewState extends State<MainTabView> {
                                           // Initialize sensible defaults if nothing is chosen yet
                                           selectedCategory ??= categoryNames.isNotEmpty ? categoryNames.first : null;
                                           selectedWallet ??= walletNames.isNotEmpty ? walletNames.first : null;
+                                          // Keep wallet id in sync with selected wallet name
+                                          if (selectedWallet != null) {
+                                            final match = wallets.firstWhere(
+                                              (w) => (w['name']?.toString() ?? '').trim() == selectedWallet,
+                                              orElse: () => <String, dynamic>{},
+                                            );
+                                            selectedWalletId = match['id']?.toString();
+                                          }
                                           return const SizedBox.shrink();
                                         }),
                                         Row(
@@ -384,7 +394,18 @@ class _MainTabViewState extends State<MainTabView> {
                                                 .toSet()
                                                 .map<DropdownMenuItem<String>>((name) => DropdownMenuItem<String>(value: name, child: Text(name, style: TextStyle(color: Colors.white))))
                                                 .toList(),
-                                            onChanged: (val) => setState(() => selectedWallet = val),
+                                            onChanged: (val) => setState(() {
+                                              selectedWallet = val;
+                                              if (selectedWallet != null) {
+                                                final match = wallets.firstWhere(
+                                                  (w) => (w['name']?.toString() ?? '').trim() == selectedWallet,
+                                                  orElse: () => <String, dynamic>{},
+                                                );
+                                                selectedWalletId = match['id']?.toString();
+                                              } else {
+                                                selectedWalletId = null;
+                                              }
+                                            }),
                                           )
                                         else
                                           Padding(
@@ -406,12 +427,23 @@ class _MainTabViewState extends State<MainTabView> {
                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                               ),
                                               onPressed: () {
-                                                final desc = _descController.text.trim();
-                                                final amt = _amountController.text.trim();
+                                                String desc = _descController.text.trim();
+                                                final amtStr = _amountController.text.trim();
                                                 final date = _dateController.text.trim();
-                                                if (desc.isNotEmpty && amt.isNotEmpty && date.isNotEmpty && selectedWallet != null && (type != 'expense' || selectedCategory != null)) {
-                                                  Navigator.pop(context, {"desc": desc, "amount": amt, "date": date, "type": type, "wallet": selectedWallet, "category": selectedCategory});
+                                                if (desc.isEmpty) {
+                                                  desc = type == 'expense' ? 'Expense' : (type == 'credit' ? 'Credit to friend' : 'Borrowed from friend');
                                                 }
+                                                if (selectedCategory == null && type == 'expense') {
+                                                  selectedCategory = 'General';
+                                                }
+                                                final amtVal = double.tryParse(amtStr) ?? 0.0;
+                                                if (amtVal <= 0 || date.isEmpty || selectedWallet == null) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(content: Text('Enter a positive amount and select a wallet')),
+                                                  );
+                                                  return;
+                                                }
+                                                Navigator.pop(context, {"desc": desc, "amount": amtStr, "date": date, "type": type, "wallet": selectedWallet, "walletId": selectedWalletId, "category": selectedCategory});
                                               },
                                               child: Text('Add', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                             ),
@@ -441,12 +473,29 @@ class _MainTabViewState extends State<MainTabView> {
                           }
                           // Update wallet balance
                           final walletName = result["wallet"];
+                          final walletId = (result["walletId"]?.toString());
                           final amt = double.tryParse(result["amount"] ?? '0') ?? 0.0;
                           final type = result["type"];
-                          int walletIdx = wallets.indexWhere((w) => w['name'] == walletName);
+                          // Load the freshest wallets snapshot to avoid stale state during update
+                          final currentWallets = await WalletService.loadWallets();
+                          // Debug trace
+                          // ignore: avoid_print
+                          print('[AddEntry] type=$type wallet="$walletName" id=${walletId ?? ''} amount=$amt');
+                          int walletIdx = -1;
+                          if (walletId != null && walletId.isNotEmpty) {
+                            walletIdx = currentWallets.indexWhere((w) => (w['id']?.toString() ?? '') == walletId);
+                            if (walletIdx == -1) {
+                              // Fallback to name match if id was not found (legacy/local mismatch)
+                              walletIdx = currentWallets.indexWhere((w) =>
+                                  (w['name']?.toString() ?? '').trim().toLowerCase() == (walletName?.toString() ?? '').trim().toLowerCase());
+                            }
+                          } else {
+                            walletIdx = currentWallets.indexWhere((w) =>
+                                (w['name']?.toString() ?? '').trim().toLowerCase() == (walletName?.toString() ?? '').trim().toLowerCase());
+                          }
                           double? newBalance;
                           if (walletIdx != -1) {
-                            double oldBalance = double.tryParse(wallets[walletIdx]['balance'].toString()) ?? 0.0;
+                            double oldBalance = double.tryParse(currentWallets[walletIdx]['balance'].toString()) ?? 0.0;
                             newBalance = oldBalance;
                             if (type == 'debit') {
                               // Borrow: add to wallet
@@ -455,8 +504,38 @@ class _MainTabViewState extends State<MainTabView> {
                               // Credit to friend or Expense: subtract from wallet
                               newBalance -= amt;
                             }
-                            wallets[walletIdx]['balance'] = newBalance;
-                            await WalletService.saveWallets(wallets);
+                            // ignore: avoid_print
+                            print('[AddEntry] oldBalance=$oldBalance -> newBalance=$newBalance');
+                            // Immediate local write to walletsBox to force UI watchers to fire
+                            try {
+                              final box = await Hive.openBox('walletsBox');
+                              final data = box.get('wallets', defaultValue: []);
+                              final localList = (data is List)
+                                  ? List<Map<String, dynamic>>.from(
+                                      data.map((e) => Map<String, dynamic>.from((e as Map).map((k, v) => MapEntry(k.toString(), v)))),
+                                    )
+                                  : <Map<String, dynamic>>[];
+                              int li = -1;
+                              if (walletId != null && walletId.isNotEmpty) {
+                                li = localList.indexWhere((w) => (w['id']?.toString() ?? '') == walletId);
+                              }
+                              if (li == -1) {
+                                li = localList.indexWhere((w) => (w['name']?.toString() ?? '').trim().toLowerCase() == (walletName?.toString() ?? '').trim().toLowerCase());
+                              }
+                              if (li != -1) {
+                                localList[li]['balance'] = newBalance;
+                                localList[li]['updatedAt'] = DateTime.now().toIso8601String();
+                                await box.put('wallets', localList);
+                              }
+                            } catch (_) {}
+                            // Persist via dedicated API (by id if available) that also enqueues wallet.update for cloud
+                            if (walletId != null && walletId.isNotEmpty) {
+                              await WalletService.updateWalletBalanceById(walletId, newBalance);
+                            } else {
+                              await WalletService.updateWalletBalance(walletName, newBalance);
+                            }
+                            // Refresh local model used by this view
+                            wallets = await WalletService.loadWallets();
                           }
                           globalExpenses.add(result);
                           // Record transaction for all actions
@@ -482,10 +561,9 @@ class _MainTabViewState extends State<MainTabView> {
                             "balance": newBalance,
                           });
                           setState(() {
+                            selectTab = 0; // jump to Home
                             homeViewKey = UniqueKey();
-                            if (selectTab == 0) {
-                              currentTabView = HomeView(key: homeViewKey);
-                            }
+                            currentTabView = HomeView(key: homeViewKey);
                           });
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Entry added!')));
                         }

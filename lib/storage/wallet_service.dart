@@ -37,9 +37,30 @@ class WalletService {
     final box = await Hive.openBox('walletsBox');
     List<Map<String, dynamic>> wallets = List<Map<String, dynamic>>.from(box.get('wallets', defaultValue: []));
     Map<String, dynamic>? updated;
+    final targetKey = name.trim().toLowerCase();
     for (var w in wallets) {
-      if (w['name'] == name) {
+      final wName = (w['name']?.toString() ?? '').trim().toLowerCase();
+      if (wName == targetKey) {
         w['balance'] = newBalance;
+        w['updatedAt'] = DateTime.now().toIso8601String();
+        updated = Map<String, dynamic>.from(w);
+        break;
+      }
+    }
+    await box.put('wallets', wallets);
+    if (updated != null) {
+      await SyncService().enqueue('wallet.update', updated);
+    }
+  }
+
+  static Future<void> updateWalletBalanceById(String id, double newBalance) async {
+    final box = await Hive.openBox('walletsBox');
+    List<Map<String, dynamic>> wallets = List<Map<String, dynamic>>.from(box.get('wallets', defaultValue: []));
+    Map<String, dynamic>? updated;
+    for (var w in wallets) {
+      if ((w['id']?.toString() ?? '') == id) {
+        w['balance'] = newBalance;
+        w['updatedAt'] = DateTime.now().toIso8601String();
         updated = Map<String, dynamic>.from(w);
         break;
       }
@@ -61,6 +82,7 @@ class WalletService {
       'id': _uuid.v4(),
       'name': name,
       'balance': balance,
+      'updatedAt': DateTime.now().toIso8601String(),
     };
     wallets.add(newWallet);
     await box.put('wallets', wallets);

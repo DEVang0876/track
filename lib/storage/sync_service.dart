@@ -185,19 +185,24 @@ class SyncService {
             {
               final String wid = (payload['id']?.toString() ?? '');
               if (wid.isNotEmpty) {
-                final exist = await Supabase.instance.client
+                // Check if any rows exist for this wallet id (avoid maybeSingle to tolerate duplicates)
+                final List existRows = await Supabase.instance.client
                     .from('wallets')
                     .select('id')
                     .eq('user_id', userId)
-                    .eq('data->>id', wid)
-                    .maybeSingle();
-                if (exist == null) {
+                    .eq('data->>id', wid);
+                if (existRows.isEmpty) {
                   await Supabase.instance.client.from('wallets').insert({
                     'user_id': userId,
                     'data': payload,
                   });
                 } else {
-                  // Optionally update existing JSON (if needed). For append-only history, we skip.
+                  // Update all matching rows to keep server consistent if duplicates exist
+                  await Supabase.instance.client
+                      .from('wallets')
+                      .update({'data': payload})
+                      .eq('user_id', userId)
+                      .eq('data->>id', wid);
                 }
               } else {
                 await Supabase.instance.client.from('wallets').insert({
@@ -337,26 +342,76 @@ class SyncService {
           .eq('user_id', userId)
           .order('created_at', ascending: false);
       final rawWallets = _unwrap(walletRows);
-      // Dedupe by id (preferred) or normalized name, keeping the newest (since list is desc)
-      final Set<String> seen = {};
-      final List<Map<String, dynamic>> wallets = [];
+      // Dedupe by id (preferred) or normalized name; keep the most recently updated using updatedAt
+      Map<String, Map<String, dynamic>> rmap = {};
       for (final w in rawWallets) {
         final id = (w['id']?.toString() ?? '');
         final nm = (w['name']?.toString() ?? '').trim().toLowerCase();
-        final key = id.isNotEmpty
-            ? 'id:$id'
-            : (nm.isNotEmpty ? 'name:$nm' : '');
-        if (key.isEmpty) {
-          // If no key fields, just include once
-          wallets.add(w);
-          continue;
-        }
-        if (!seen.contains(key)) {
-          seen.add(key);
-          wallets.add(w);
+        final key = id.isNotEmpty ? 'id:$id' : (nm.isNotEmpty ? 'name:$nm' : _uuid.v4());
+        final existing = rmap[key];
+        if (existing == null) {
+          rmap[key] = w;
+        } else {
+          final a = DateTime.tryParse((w['updatedAt']?.toString() ?? ''));
+          final b = DateTime.tryParse((existing['updatedAt']?.toString() ?? ''));
+          if (a != null && b != null) {
+            if (a.isAfter(b)) rmap[key] = w;
+          } else {
+            // fallback to list order (server returned desc by created_at)
+            rmap[key] = existing; // keep first
+          }
         }
       }
-      await _writeIfUseful('walletsBox', 'wallets', wallets);
+      final List<Map<String, dynamic>> wallets = rmap.values.toList();
+      // If there are pending local wallet ops, prefer merging to avoid overwriting fresh local changes
+      final qbox = await Hive.openBox(_queueBoxName);
+      final hasPendingWalletOps = qbox.values.any((raw) {
+        try {
+          final m = Map<String, dynamic>.from(raw as Map);
+          final t = (m['type']?.toString() ?? '');
+          return t.startsWith('wallet.');
+        } catch (_) { return false; }
+      });
+
+      // Always merge with local using updatedAt to avoid overwriting fresher local edits
+      final lbox = await Hive.openBox('walletsBox');
+      final current = lbox.get('wallets', defaultValue: []) as List? ?? [];
+      final local = current.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      Map<String, Map<String, dynamic>> byKey(List<Map<String, dynamic>> list) {
+        final m = <String, Map<String, dynamic>>{};
+        for (final w in list) {
+          final id = (w['id']?.toString() ?? '').trim();
+          final nm = (w['name']?.toString() ?? '').trim().toLowerCase();
+          final k = id.isNotEmpty ? 'id:$id' : (nm.isNotEmpty ? 'name:$nm' : _uuid.v4());
+          m[k] = w;
+        }
+        return m;
+      }
+      final rmap2 = byKey(wallets);
+      final lmap2 = byKey(local);
+      final mergedKeys2 = {...rmap2.keys, ...lmap2.keys};
+      final merged2 = <Map<String, dynamic>>[];
+      for (final k in mergedKeys2) {
+        if (lmap2.containsKey(k) && rmap2.containsKey(k)) {
+          final la = DateTime.tryParse((lmap2[k]!['updatedAt']?.toString() ?? ''));
+          final ra = DateTime.tryParse((rmap2[k]!['updatedAt']?.toString() ?? ''));
+          if (la != null && ra != null) {
+            merged2.add(la.isAfter(ra) ? lmap2[k]! : rmap2[k]!);
+          } else if (la != null && ra == null) {
+            merged2.add(lmap2[k]!);
+          } else if (ra != null && la == null) {
+            merged2.add(rmap2[k]!);
+          } else {
+            // No timestamps: prefer remote if no pending wallet ops; else prefer local
+            merged2.add(hasPendingWalletOps ? lmap2[k]! : rmap2[k]!);
+          }
+        } else if (lmap2.containsKey(k)) {
+          merged2.add(lmap2[k]!);
+        } else if (rmap2.containsKey(k)) {
+          merged2.add(rmap2[k]!);
+        }
+      }
+      await _writeIfUseful('walletsBox', 'wallets', merged2);
   } catch (e) { _lastError = e.toString(); _saveLastError(); }
 
     // Pull budgets
