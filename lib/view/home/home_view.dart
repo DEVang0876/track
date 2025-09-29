@@ -286,7 +286,22 @@ class _HomeViewState extends State<HomeView> {
 
     // Filtered lists for each tab
     final walletEntries = allEntries.where((e) => e["type"] == "Wallet Added" || e["type"] == "Wallet Deleted").toList();
-    final expenseEntries = allEntries.where((e) => e["_entryType"] == "expense").toList();
+    // Show both local expenses and transaction entries marked as Expense in the Expenses tab
+    final expenseEntries = [
+      ...allEntries.where((e) => e["_entryType"] == "expense"),
+      ...allEntries.where((e) => e["_entryType"] == "transaction" && (e["type"] == "Expense"))
+          .map((t) => {
+                // Map transaction to expense-like structure for display
+                "desc": t["desc"],
+                "amount": (t["amount"] ?? '').toString(),
+                "date": t["date"],
+                "wallet": t["wallet"],
+                // Some transaction payloads may carry a category; if not, leave empty
+                "category": t["category"] ?? '',
+                "afterBalance": t["balance"],
+                "_entryType": "expense",
+              })
+    ];
     final creditBorrowEntries = allEntries.where((e) => e["type"] == "Credit" || e["type"] == "Borrowed").toList();
 
     // Compute totalWallets for header
