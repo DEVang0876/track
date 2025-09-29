@@ -43,6 +43,14 @@ class _LoginViewState extends State<LoginView> {
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text,
       );
+      // Supabase may require email confirmation. Inform the user explicitly.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Confirm email and Login Back')),
+        );
+        // Keep the email, clear password for safety
+        _passCtrl.clear();
+      }
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {

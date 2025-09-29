@@ -50,6 +50,10 @@ class WalletService {
   static Future<void> saveWallets(List<Map<String, dynamic>> wallets) async {
     final box = await Hive.openBox('walletsBox');
     await box.put('wallets', wallets);
+    // Queue for cloud sync (batch)
+    await SyncService().enqueue('wallets.save', {
+      'items': wallets,
+    });
   }
 
   static Future<List<Map<String, dynamic>>> loadWallets() async {

@@ -35,6 +35,12 @@ class SyncService {
     await box.clear();
   }
 
+  /// Number of pending items in local sync queue.
+  Future<int> pendingCount() async {
+    final box = await Hive.openBox(_queueBoxName);
+    return box.length;
+  }
+
   Future<void> enqueue(String type, Map<String, dynamic> payload) async {
     final box = await Hive.openBox(_queueBoxName);
     final item = {
@@ -44,6 +50,9 @@ class SyncService {
       'ts': DateTime.now().toIso8601String(),
     };
     await box.add(item);
+    // Attempt to sync right away (no-op if not logged in or offline)
+    // This ensures the server has data before a potential sign-out, so recovery works.
+    unawaited(syncNow());
   }
 
   Future<void> syncNow() async {
@@ -75,30 +84,43 @@ class SyncService {
         switch (type) {
           case 'expense.add':
             await Supabase.instance.client.from('expenses').insert({
-              ...payload,
               'user_id': userId,
+              'data': payload,
             });
             break;
           case 'wallet.tx.add':
             await Supabase.instance.client.from('transactions').insert({
-              ...payload,
               'user_id': userId,
+              'data': payload,
             });
             break;
           case 'wallet.balance.update':
-            await Supabase.instance.client.from('wallets').upsert({
-              ...payload,
+            // Store the latest wallet snapshot as a row
+            await Supabase.instance.client.from('wallets').insert({
               'user_id': userId,
+              'data': payload,
             });
             break;
+          case 'wallets.save':
+            // Batch insert all wallets as separate rows
+            final List list = payload['items'] as List? ?? [];
+            if (list.isNotEmpty) {
+              for (final w in list) {
+                await Supabase.instance.client.from('wallets').insert({
+                  'user_id': userId,
+                  'data': Map<String, dynamic>.from(w as Map),
+                });
+              }
+            }
+            break;
           case 'budgets.save':
-            // Upsert budgets list; assumes payload contains an array of budgets
+            // Batch insert budgets items as separate rows
             final List list = payload['items'] as List? ?? [];
             if (list.isNotEmpty) {
               for (final b in list) {
-                await Supabase.instance.client.from('budgets').upsert({
-                  ...Map<String, dynamic>.from(b as Map),
+                await Supabase.instance.client.from('budgets').insert({
                   'user_id': userId,
+                  'data': Map<String, dynamic>.from(b as Map),
                 });
               }
             }
@@ -107,9 +129,9 @@ class SyncService {
             final List list = payload['items'] as List? ?? [];
             if (list.isNotEmpty) {
               for (final s in list) {
-                await Supabase.instance.client.from('subscriptions').upsert({
-                  ...Map<String, dynamic>.from(s as Map),
+                await Supabase.instance.client.from('subscriptions').insert({
                   'user_id': userId,
+                  'data': Map<String, dynamic>.from(s as Map),
                 });
               }
             }
@@ -125,56 +147,83 @@ class SyncService {
 
   Future<void> _pullLatest(String userId) async {
     final client = Supabase.instance.client;
+    // Helper to unwrap JSON rows
+    List<Map<String, dynamic>> _unwrap(List<dynamic> rows) {
+      return rows.map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        final data = m['data'];
+        if (data is Map) {
+          return Map<String, dynamic>.from(data);
+        }
+        return <String, dynamic>{};
+      }).toList();
+    }
+
+    // Helper to avoid wiping local data when remote is empty
+    Future<void> _writeIfUseful(String boxName, String key, List<Map<String, dynamic>> remote) async {
+      final box = await Hive.openBox(boxName);
+      final current = box.get(key, defaultValue: []);
+  final hasLocal = current is List && current.isNotEmpty;
+      if (remote.isEmpty && hasLocal) {
+        // Keep local copy; do not overwrite with empty remote
+        return;
+      }
+      await box.put(key, remote);
+    }
+
     // Pull expenses
     try {
-      final exp = await client
+      final expRows = await client
           .from('expenses')
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
-      await Hive.openBox('expensesBox')
-          .then((b) => b.put('expenses', List<Map<String, dynamic>>.from(exp)));
+      final exp = _unwrap(expRows);
+      await _writeIfUseful('expensesBox', 'expenses', exp);
     } catch (_) {}
 
     // Pull transactions
     try {
-      final tx = await client
+      final txRows = await client
           .from('transactions')
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
-      await Hive.openBox('walletsBox')
-          .then((b) => b.put('transactions', List<Map<String, dynamic>>.from(tx)));
+      final tx = _unwrap(txRows);
+      await _writeIfUseful('walletsBox', 'transactions', tx);
     } catch (_) {}
 
     // Pull wallets
     try {
-      final wallets = await client
+      final walletRows = await client
           .from('wallets')
           .select()
-          .eq('user_id', userId);
-      await Hive.openBox('walletsBox')
-          .then((b) => b.put('wallets', List<Map<String, dynamic>>.from(wallets)));
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+      final wallets = _unwrap(walletRows);
+      await _writeIfUseful('walletsBox', 'wallets', wallets);
     } catch (_) {}
 
     // Pull budgets
     try {
-      final budgets = await client
+      final budgetRows = await client
           .from('budgets')
           .select()
-          .eq('user_id', userId);
-      await Hive.openBox('budgetsBox')
-          .then((b) => b.put('budgets', List<Map<String, dynamic>>.from(budgets)));
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+      final budgets = _unwrap(budgetRows);
+      await _writeIfUseful('budgetsBox', 'budgets', budgets);
     } catch (_) {}
 
     // Pull subscriptions
     try {
-      final subs = await client
+      final subRows = await client
           .from('subscriptions')
           .select()
-          .eq('user_id', userId);
-      await Hive.openBox('subsBox')
-          .then((b) => b.put('subs', List<Map<String, dynamic>>.from(subs)));
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+      final subs = _unwrap(subRows);
+      await _writeIfUseful('subsBox', 'subs', subs);
     } catch (_) {}
   }
 }

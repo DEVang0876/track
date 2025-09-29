@@ -14,7 +14,7 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> {
   late final Stream<AuthState> _authStream;
   Session? _session;
-  bool _didInitialSync = false;
+  String? _lastUserId;
 
   @override
   void initState() {
@@ -31,10 +31,15 @@ class _AuthGateState extends State<AuthGate> {
       builder: (context, snapshot) {
         // Prefer latest session if event fired otherwise fallback to initial
         final session = snapshot.data?.session ?? _session;
-        if (session != null && !_didInitialSync) {
-          _didInitialSync = true;
-          // Kick off an initial sync after login
+        final currentUserId = session?.user.id;
+        // Trigger a sync whenever a user signs in or switches
+        if (currentUserId != null && currentUserId != _lastUserId) {
+          _lastUserId = currentUserId;
           Future.microtask(() => SyncService().syncNow());
+        }
+        // Reset tracker when signed out
+        if (currentUserId == null) {
+          _lastUserId = null;
         }
         if (session == null) {
           return const LoginView();

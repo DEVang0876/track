@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:hive/hive.dart';
 import 'package:trackizer/common/color_extension.dart';
 import 'package:trackizer/storage/wallet_service.dart';
 import 'package:trackizer/storage/storage_service.dart';
@@ -18,11 +20,40 @@ class _HomeViewState extends State<HomeView> {
   List<Map<String, dynamic>> wallets = [];
   List<Map<String, dynamic>> transactions = [];
   List<Map<String, dynamic>> expenses = [];
+  StreamSubscription? _walletsWatch;
+  StreamSubscription? _expensesWatch;
 
   @override
   void initState() {
     super.initState();
     _loadAllData();
+    _attachWatchers();
+  }
+
+  Future<void> _attachWatchers() async {
+    try {
+      final walletsBox = await Hive.openBox('walletsBox');
+      _walletsWatch = walletsBox.watch().listen((event) {
+        if (event.key == 'wallets' || event.key == 'transactions') {
+          _loadAllData();
+        }
+      });
+    } catch (_) {}
+    try {
+      final expensesBox = await Hive.openBox('expensesBox');
+      _expensesWatch = expensesBox.watch().listen((event) {
+        if (event.key == 'expenses') {
+          _loadAllData();
+        }
+      });
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _walletsWatch?.cancel();
+    _expensesWatch?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadAllData() async {

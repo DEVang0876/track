@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:trackizer/common/supabase_config.dart';
 import 'package:trackizer/storage/storage_service.dart';
 import 'package:trackizer/common/supabase_checks.dart';
+import 'package:trackizer/common/net_diagnostics.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -23,6 +24,19 @@ class _SettingsViewState extends State<SettingsView> {
   String avatarPath = "assets/img/u1.png";
   String selectedCurrency = "₹ INR";
   bool isDarkTheme = true;
+  int _pending = 0;
+  String? _cloudHint;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshPending();
+  }
+
+  Future<void> _refreshPending() async {
+    final c = await SyncService().pendingCount();
+    if (mounted) setState(() => _pending = c);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +258,16 @@ class _SettingsViewState extends State<SettingsView> {
                                     final res = await checkSupabaseSetup();
                                     if (!mounted) return;
                                     final ok = res.values.every((v) => v == 'ok');
-                                    final msg = ok ? 'All tables accessible' : res.entries.map((e) => '${e.key}: ${e.value}').join(' | ');
+                                    String msg;
+                                    if (ok) {
+                                      msg = 'All tables accessible';
+                                      _cloudHint = null;
+                                    } else {
+                                      msg = res.entries.map((e) => '${e.key}: ${e.value}').join(' | ');
+                                      if (msg.contains('Could not find the table')) {
+                                        _cloudHint = 'Run supabase/bootstrap.sql in your Supabase SQL editor to create tables & policies';
+                                      }
+                                    }
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text(msg), duration: const Duration(seconds: 4)),
                                     );
@@ -253,6 +276,53 @@ class _SettingsViewState extends State<SettingsView> {
                                 )
                               ],
                             ),
+                          ),
+                        if (supaEnabled)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(children: [
+                                  const Icon(Icons.network_check, color: Colors.white70),
+                                  const SizedBox(width: 8),
+                                  Text("Network diagnostics", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
+                                ]),
+                                TextButton(
+                                  onPressed: () async {
+                                    final r = await diagnoseSupabaseConnectivity();
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(r.toString()), duration: const Duration(seconds: 6)),
+                                    );
+                                  },
+                                  child: const Text('Run'),
+                                )
+                              ],
+                            ),
+                          ),
+                        if (supaEnabled)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(children: [
+                                  const Icon(Icons.pending_actions, color: Colors.white70),
+                                  const SizedBox(width: 8),
+                                  Text("Queued changes", style: TextStyle(color: TColor.white, fontWeight: FontWeight.w600)),
+                                ]),
+                                TextButton(
+                                  onPressed: () async { await _refreshPending(); },
+                                  child: Text('$_pending'),
+                                )
+                              ],
+                            ),
+                          ),
+                        if (_cloudHint != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Text(_cloudHint!, style: TextStyle(color: Colors.amber.shade200, fontSize: 12)),
                           ),
                       ],
                     ),
@@ -350,7 +420,29 @@ class _SettingsViewState extends State<SettingsView> {
                                 ]),
                                 TextButton(
                                   onPressed: () async {
-                                    // Clear local data first for a clean slate across users
+                                    // Always attempt to sync before signing out to avoid data loss
+                                    await SyncService().syncNow();
+                                    final pendingAfter = await SyncService().pendingCount();
+                                    if (!mounted) return;
+                                    if (pendingAfter > 0) {
+                                      // Abort sign out if still pending (likely offline or server error)
+                                      showDialog(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Can\'t sign out yet'),
+                                          content: Text('You still have $pendingAfter change(s) waiting to sync. Please connect to the internet and try again.'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.of(ctx).pop(),
+                                              child: const Text('OK'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      await _refreshPending();
+                                      return;
+                                    }
+                                    // Clear local data for a clean slate across users only after successful sync
                                     await StorageService.clearAllLocal(includeQueue: true);
                                     await Supabase.instance.client.auth.signOut();
                                     if (mounted) Navigator.pop(context);
